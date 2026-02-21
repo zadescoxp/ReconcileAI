@@ -1,0 +1,30 @@
+{
+  "name": "reconcile-ai",
+  "version": "1.0.0",
+  "description": "ReconcileAI - Autonomous Accounts Payable Clerk",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "test": "jest"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "invoice",
+    "reconciliation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "aws-cdk": "^2.100.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  }
+}
