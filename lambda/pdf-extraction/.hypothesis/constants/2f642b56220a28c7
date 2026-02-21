@@ -1,0 +1,4 @@
+# file: C:\Users\DELL\ReconcileAI\lambda\pdf-extraction\index.py
+# hypothesis_version: 6.151.9
+
+[200, ',', 'AIReasoning', 'ActionType', 'Actor', 'Body', 'Code', 'Details', 'Discrepancies', 'EXTRACTING', 'EntityId', 'EntityType', 'Error', 'ExtractionError', 'FLAGGED', 'FraudFlags', 'INVOICES_TABLE_NAME', 'Invoice', 'InvoiceDate', 'InvoiceExtracted', 'InvoiceId', 'InvoiceNumber', 'LineItems', 'LogId', 'MatchedPOIds', 'NoSuchKey', 'PDF has no pages', 'Permanent', 'Reasoning', 'ReceivedDate', 'Retryable', 'S3Bucket', 'S3Key', 'ServiceUnavailable', 'SlowDown', 'Status', 'StepFunctionArn', 'System', 'Timestamp', 'TotalAmount', 'Unexpected', 'VendorName', '\\s+', 'dynamodb', 'error', 'error_message', 'error_type', 'invoice_date', 'invoice_id', 'invoice_number', 'item_description', 'line_items', 'line_items_count', 'quantity', 'raw_text', 's3', 's3_bucket', 's3_key', 'status', 'statusCode', 'total_amount', 'total_price', 'unit_price', 'unknown', 'vendor_name']

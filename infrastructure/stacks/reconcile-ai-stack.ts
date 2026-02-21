@@ -7,6 +7,7 @@ import * as ses from 'aws-cdk-lib/aws-ses';
 import * as sesActions from 'aws-cdk-lib/aws-ses-actions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as path from 'path';
 
 export class ReconcileAIStack extends cdk.Stack {
   public readonly posTable: dynamodb.Table;
@@ -17,6 +18,7 @@ export class ReconcileAIStack extends cdk.Stack {
   public readonly userPoolClient: cognito.UserPoolClient;
   public readonly adminGroup: cognito.CfnUserPoolGroup;
   public readonly userGroup: cognito.CfnUserPoolGroup;
+  public readonly pdfExtractionLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -292,6 +294,47 @@ export class ReconcileAIStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'SESSetupInstructions', {
       value: 'See docs/SES_SETUP.md for email verification and configuration steps',
       description: 'SES Setup Instructions',
+    });
+
+    // ========================================
+    // Lambda Functions
+    // ========================================
+
+    // PDF Extraction Lambda Function
+    this.pdfExtractionLambda = new lambda.Function(this, 'PDFExtractionLambda', {
+      functionName: 'ReconcileAI-PDFExtraction',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64, // ARM/Graviton2 for cost efficiency
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/pdf-extraction')),
+      timeout: cdk.Duration.seconds(60), // PDF extraction can take time
+      memorySize: 512, // Sufficient for PDF processing
+      environment: {
+        INVOICES_TABLE_NAME: this.invoicesTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+      },
+      layers: [
+        // Lambda layer for pdfplumber will be created separately
+        // For now, we'll package dependencies with the function
+      ],
+    });
+
+    // Grant Lambda permissions to read from S3
+    this.invoiceBucket.grantRead(this.pdfExtractionLambda);
+
+    // Grant Lambda permissions to write to DynamoDB tables
+    this.invoicesTable.grantWriteData(this.pdfExtractionLambda);
+    this.auditLogsTable.grantWriteData(this.pdfExtractionLambda);
+
+    // Output Lambda function name
+    new cdk.CfnOutput(this, 'PDFExtractionLambdaName', {
+      value: this.pdfExtractionLambda.functionName,
+      description: 'PDF Extraction Lambda Function Name',
+    });
+
+    new cdk.CfnOutput(this, 'PDFExtractionLambdaArn', {
+      value: this.pdfExtractionLambda.functionArn,
+      description: 'PDF Extraction Lambda Function ARN',
     });
   }
 }

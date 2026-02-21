@@ -57,8 +57,8 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Configure S3 trigger for Lambda
     - _Requirements: 3.1, 14.2_
 
-- [ ] 2. Backend Core - PDF Extraction Lambda (Day 1-2)
-  - [ ] 2.1 Create PDF extraction Lambda function
+- [x] 2. Backend Core - PDF Extraction Lambda (Day 1-2)
+  - [x] 2.1 Create PDF extraction Lambda function
     - Set up Python Lambda with ARM architecture
     - Add pdfplumber dependency via Lambda layer
     - Implement S3 event handler
@@ -68,11 +68,11 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Log extraction to AuditLogs
     - _Requirements: 4.1, 4.2, 4.4, 10.1_
   
-  - [ ]* 2.2 Write property test for PDF extraction
+  - [x] 2.2 Write property test for PDF extraction
     - **Property 9: Invoice Data Extraction Completeness**
     - **Validates: Requirements 4.1, 4.2, 4.4**
   
-  - [ ]* 2.3 Write unit tests for PDF extraction edge cases
+  - [x] 2.3 Write unit tests for PDF extraction edge cases
     - Test malformed PDFs
     - Test PDFs with no text
     - Test PDFs with missing fields
