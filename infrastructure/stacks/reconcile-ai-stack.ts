@@ -19,6 +19,7 @@ export class ReconcileAIStack extends cdk.Stack {
   public readonly adminGroup: cognito.CfnUserPoolGroup;
   public readonly userGroup: cognito.CfnUserPoolGroup;
   public readonly pdfExtractionLambda: lambda.Function;
+  public readonly aiMatchingLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -335,6 +336,54 @@ export class ReconcileAIStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'PDFExtractionLambdaArn', {
       value: this.pdfExtractionLambda.functionArn,
       description: 'PDF Extraction Lambda Function ARN',
+    });
+
+    // AI Matching Lambda Function
+    this.aiMatchingLambda = new lambda.Function(this, 'AIMatchingLambda', {
+      functionName: 'ReconcileAI-AIMatching',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64, // ARM/Graviton2 for cost efficiency
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/ai-matching')),
+      timeout: cdk.Duration.seconds(60), // AI matching can take time
+      memorySize: 512, // Sufficient for AI operations
+      environment: {
+        POS_TABLE_NAME: this.posTable.tableName,
+        INVOICES_TABLE_NAME: this.invoicesTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        AWS_REGION: this.region,
+      },
+    });
+
+    // Grant Lambda permissions to read from POs table
+    this.posTable.grantReadData(this.aiMatchingLambda);
+
+    // Grant Lambda permissions to read/write to Invoices table
+    this.invoicesTable.grantReadWriteData(this.aiMatchingLambda);
+
+    // Grant Lambda permissions to write to AuditLogs table
+    this.auditLogsTable.grantWriteData(this.aiMatchingLambda);
+
+    // Grant Lambda permissions to invoke Bedrock
+    this.aiMatchingLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:InvokeModel'],
+        resources: [
+          `arn:aws:bedrock:${this.region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
+        ],
+      })
+    );
+
+    // Output Lambda function details
+    new cdk.CfnOutput(this, 'AIMatchingLambdaName', {
+      value: this.aiMatchingLambda.functionName,
+      description: 'AI Matching Lambda Function Name',
+    });
+
+    new cdk.CfnOutput(this, 'AIMatchingLambdaArn', {
+      value: this.aiMatchingLambda.functionArn,
+      description: 'AI Matching Lambda Function ARN',
     });
   }
 }

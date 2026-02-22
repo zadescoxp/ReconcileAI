@@ -78,8 +78,8 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Test PDFs with missing fields
     - _Requirements: 4.3_
 
-- [ ] 3. Backend Core - AI Matching Lambda (Day 2-3)
-  - [ ] 3.1 Create AI matching Lambda function
+- [x] 3. Backend Core - AI Matching Lambda (Day 2-3)
+  - [x] 3.1 Create AI matching Lambda function
     - Set up Python Lambda with ARM architecture
     - Implement Bedrock API client for Claude 3 Haiku
     - Query relevant POs from DynamoDB by vendor name
@@ -89,29 +89,29 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Log AI decision with reasoning to AuditLogs
     - _Requirements: 5.1, 5.2, 5.4, 6.1, 6.2, 10.2_
   
-  - [ ] 3.2 Implement perfect match classification logic
+  - [x] 3.2 Implement perfect match classification logic
     - Check all line items match within ±5% price tolerance
     - Check quantities match exactly
     - Check item descriptions match (fuzzy matching)
     - Set is_perfect_match flag
     - _Requirements: 5.3_
   
-  - [ ]* 3.3 Write property test for AI matching
+  - [x] 3.3 Write property test for AI matching
     - **Property 12: Perfect Match Classification**
     - **Validates: Requirements 5.3**
   
-  - [ ]* 3.4 Write property test for discrepancy detection
+  - [x] 3.4 Write property test for discrepancy detection
     - **Property 13: Discrepancy Detection Completeness**
     - **Validates: Requirements 5.4**
   
-  - [ ]* 3.5 Write unit tests for AI matching edge cases
+  - [x] 3.5 Write unit tests for AI matching edge cases
     - Test invoice with no matching POs
     - Test invoice with multiple matching POs
     - Test Bedrock API failures
     - _Requirements: 5.1, 5.2_
 
-- [ ] 4. Backend Core - Fraud Detection Lambda (Day 3)
-  - [ ] 4.1 Create fraud detection Lambda function
+- [x] 4. Backend Core - Fraud Detection Lambda (Day 3)
+  - [x] 4.1 Create fraud detection Lambda function
     - Set up Python Lambda with ARM architecture
     - Implement price spike detection (>20% above historical average)
     - Implement unrecognized vendor detection (no POs for vendor)
@@ -121,15 +121,15 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Log fraud detection to AuditLogs
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 10.1_
   
-  - [ ]* 4.2 Write property test for price spike detection
+  - [x] 4.2 Write property test for price spike detection
     - **Property 16: Price Spike Detection**
     - **Validates: Requirements 7.1**
   
-  - [ ]* 4.3 Write property test for unrecognized vendor detection
+  - [x] 4.3 Write property test for unrecognized vendor detection
     - **Property 17: Unrecognized Vendor Detection**
     - **Validates: Requirements 7.2**
   
-  - [ ]* 4.4 Write unit tests for fraud detection edge cases
+  - [x] 4.4 Write unit tests for fraud detection edge cases
     - Test invoice with multiple fraud flags
     - Test invoice with no historical data
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
@@ -149,11 +149,11 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Log approval decision to AuditLogs
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 7.5_
   
-  - [ ]* 5.3 Write property test for auto-approval
+  - [ ] 5.3 Write property test for auto-approval
     - **Property 25: Auto-Approval for Clean Invoices**
     - **Validates: Requirements 9.1**
   
-  - [ ]* 5.4 Write property test for workflow pause on flags
+  - [ ] 5.4 Write property test for workflow pause on flags
     - **Property 20: Workflow Pause on Flags**
     - **Validates: Requirements 7.5, 8.1**
 
@@ -200,11 +200,11 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Add click to view PO details
     - _Requirements: 2.4, 13.4_
   
-  - [ ]* 8.3 Write property test for PO validation
+  - [ ] 8.3 Write property test for PO validation
     - **Property 2: PO Validation Completeness**
     - **Validates: Requirements 2.1**
   
-  - [ ]* 8.4 Write unit tests for PO upload component
+  - [ ] 8.4 Write unit tests for PO upload component
     - Test file upload with valid PO
     - Test file upload with invalid PO
     - Test API error handling
@@ -234,7 +234,7 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Display success/error messages
     - _Requirements: 8.4, 8.5, 8.6_
   
-  - [ ]* 9.4 Write unit tests for invoice approval component
+  - [ ] 9.4 Write unit tests for invoice approval component
     - Test approve action
     - Test reject action
     - Test API error handling
