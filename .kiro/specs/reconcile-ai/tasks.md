@@ -134,30 +134,30 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Test invoice with no historical data
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 5. Step Functions Workflow (Day 3-4)
-  - [ ] 5.1 Define Step Functions state machine with CDK
+- [x] 5. Step Functions Workflow (Day 3-4)
+  - [x] 5.1 Define Step Functions state machine with CDK
     - Create 4-step workflow: Extract → Match → Detect → Resolve
     - Configure retry logic (3 retries with exponential backoff)
     - Configure error handling (catch and flag for manual review)
     - Add S3 trigger to start execution on PDF upload
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
   
-  - [ ] 5.2 Implement auto-approval logic in Resolve step
+  - [x] 5.2 Implement auto-approval logic in Resolve step
     - Check if invoice has zero discrepancies and zero fraud flags
     - If clean, update status to "Approved" and complete workflow
     - If flagged, update status to "Flagged" and pause for human approval
     - Log approval decision to AuditLogs
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 7.5_
   
-  - [ ] 5.3 Write property test for auto-approval
+  - [x] 5.3 Write property test for auto-approval
     - **Property 25: Auto-Approval for Clean Invoices**
     - **Validates: Requirements 9.1**
   
-  - [ ] 5.4 Write property test for workflow pause on flags
+  - [x] 5.4 Write property test for workflow pause on flags
     - **Property 20: Workflow Pause on Flags**
     - **Validates: Requirements 7.5, 8.1**
 
-- [ ] 6. Checkpoint - Backend Integration Test
+- [x] 6. Checkpoint - Backend Integration Test
   - Run end-to-end test: email → S3 → Step Functions → DynamoDB
   - Verify perfect match invoice gets auto-approved
   - Verify flagged invoice pauses for approval

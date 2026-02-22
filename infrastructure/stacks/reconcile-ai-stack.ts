@@ -7,6 +7,9 @@ import * as ses from 'aws-cdk-lib/aws-ses';
 import * as sesActions from 'aws-cdk-lib/aws-ses-actions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as path from 'path';
 
 export class ReconcileAIStack extends cdk.Stack {
@@ -20,6 +23,9 @@ export class ReconcileAIStack extends cdk.Stack {
   public readonly userGroup: cognito.CfnUserPoolGroup;
   public readonly pdfExtractionLambda: lambda.Function;
   public readonly aiMatchingLambda: lambda.Function;
+  public readonly fraudDetectionLambda: lambda.Function;
+  public readonly resolveStepLambda: lambda.Function;
+  public readonly invoiceProcessingStateMachine: sfn.StateMachine;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -384,6 +390,238 @@ export class ReconcileAIStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'AIMatchingLambdaArn', {
       value: this.aiMatchingLambda.functionArn,
       description: 'AI Matching Lambda Function ARN',
+    });
+
+    // Fraud Detection Lambda Function
+    this.fraudDetectionLambda = new lambda.Function(this, 'FraudDetectionLambda', {
+      functionName: 'ReconcileAI-FraudDetection',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64, // ARM/Graviton2 for cost efficiency
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/fraud-detection')),
+      timeout: cdk.Duration.seconds(30), // Fraud detection is fast
+      memorySize: 256, // Minimal memory needed
+      environment: {
+        POS_TABLE_NAME: this.posTable.tableName,
+        INVOICES_TABLE_NAME: this.invoicesTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+      },
+    });
+
+    // Grant Lambda permissions to read from POs and Invoices tables
+    this.posTable.grantReadData(this.fraudDetectionLambda);
+    this.invoicesTable.grantReadWriteData(this.fraudDetectionLambda);
+    this.auditLogsTable.grantWriteData(this.fraudDetectionLambda);
+
+    // Output Lambda function details
+    new cdk.CfnOutput(this, 'FraudDetectionLambdaName', {
+      value: this.fraudDetectionLambda.functionName,
+      description: 'Fraud Detection Lambda Function Name',
+    });
+
+    new cdk.CfnOutput(this, 'FraudDetectionLambdaArn', {
+      value: this.fraudDetectionLambda.functionArn,
+      description: 'Fraud Detection Lambda Function ARN',
+    });
+
+    // Resolve Step Lambda Function (Auto-approval logic)
+    this.resolveStepLambda = new lambda.Function(this, 'ResolveStepLambda', {
+      functionName: 'ReconcileAI-ResolveStep',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64, // ARM/Graviton2 for cost efficiency
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/resolve-step')),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        INVOICES_TABLE_NAME: this.invoicesTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+      },
+    });
+
+    // Grant Lambda permissions
+    this.invoicesTable.grantReadWriteData(this.resolveStepLambda);
+    this.auditLogsTable.grantWriteData(this.resolveStepLambda);
+
+    // Output Lambda function details
+    new cdk.CfnOutput(this, 'ResolveStepLambdaName', {
+      value: this.resolveStepLambda.functionName,
+      description: 'Resolve Step Lambda Function Name',
+    });
+
+    new cdk.CfnOutput(this, 'ResolveStepLambdaArn', {
+      value: this.resolveStepLambda.functionArn,
+      description: 'Resolve Step Lambda Function ARN',
+    });
+
+    // ========================================
+    // Step Functions State Machine (4 steps: Extract → Match → Detect → Resolve)
+    // ========================================
+
+    // Step 1: Extract - PDF text extraction
+    const extractTask = new tasks.LambdaInvoke(this, 'ExtractInvoiceData', {
+      lambdaFunction: this.pdfExtractionLambda,
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+    });
+
+    // Step 2: Match - AI matching against POs
+    const matchTask = new tasks.LambdaInvoke(this, 'MatchInvoiceToPOs', {
+      lambdaFunction: this.aiMatchingLambda,
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+    });
+
+    // Step 3: Detect - Fraud detection
+    const detectTask = new tasks.LambdaInvoke(this, 'DetectFraud', {
+      lambdaFunction: this.fraudDetectionLambda,
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+    });
+
+    // Step 4: Resolve - Auto-approval or flag for human review
+    const resolveTask = new tasks.LambdaInvoke(this, 'ResolveInvoice', {
+      lambdaFunction: this.resolveStepLambda,
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+    });
+
+    // Configure retry logic for all tasks (3 retries with exponential backoff)
+    const retryConfig = {
+      errors: ['States.TaskFailed', 'States.Timeout', 'Lambda.ServiceException'],
+      interval: cdk.Duration.seconds(2),
+      maxAttempts: 3,
+      backoffRate: 2.0,
+    };
+
+    extractTask.addRetry(retryConfig);
+    matchTask.addRetry(retryConfig);
+    detectTask.addRetry(retryConfig);
+    resolveTask.addRetry(retryConfig);
+
+    // Flag for manual review state (when all retries fail)
+    const flagForManualReview = new sfn.Succeed(this, 'FlaggedForManualReview', {
+      comment: 'Invoice flagged for manual review due to processing errors',
+    });
+
+    // Configure error handling (catch and flag for manual review)
+    extractTask.addCatch(flagForManualReview, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    matchTask.addCatch(flagForManualReview, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    detectTask.addCatch(flagForManualReview, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    resolveTask.addCatch(flagForManualReview, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    // Define the workflow: Extract → Match → Detect → Resolve
+    const definition = extractTask
+      .next(matchTask)
+      .next(detectTask)
+      .next(resolveTask);
+
+    // Create the state machine
+    this.invoiceProcessingStateMachine = new sfn.StateMachine(this, 'InvoiceProcessingStateMachine', {
+      stateMachineName: 'ReconcileAI-InvoiceProcessing',
+      definition,
+      timeout: cdk.Duration.minutes(5), // Max 5 minutes per invoice
+      tracingEnabled: true, // Enable X-Ray tracing for debugging
+    });
+
+    // Output state machine details
+    new cdk.CfnOutput(this, 'StateMachineArn', {
+      value: this.invoiceProcessingStateMachine.stateMachineArn,
+      description: 'Invoice Processing State Machine ARN',
+    });
+
+    new cdk.CfnOutput(this, 'StateMachineName', {
+      value: this.invoiceProcessingStateMachine.stateMachineName,
+      description: 'Invoice Processing State Machine Name',
+    });
+
+    // ========================================
+    // S3 Trigger for Step Functions
+    // ========================================
+
+    // Create a Lambda function to trigger Step Functions on S3 upload
+    const s3TriggerLambda = new lambda.Function(this, 'S3TriggerLambda', {
+      functionName: 'ReconcileAI-S3Trigger',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromInline(`
+import json
+import boto3
+import os
+
+sfn_client = boto3.client('stepfunctions')
+STATE_MACHINE_ARN = os.environ['STATE_MACHINE_ARN']
+
+def lambda_handler(event, context):
+    """Trigger Step Functions execution when PDF is uploaded to S3"""
+    for record in event.get('Records', []):
+        bucket = record['s3']['bucket']['name']
+        key = record['s3']['object']['key']
+        
+        # Only process PDFs in the invoices/ folder
+        if key.startswith('invoices/') and key.endswith('.pdf'):
+            # Start Step Functions execution
+            execution_input = {
+                's3_bucket': bucket,
+                's3_key': key,
+                'invoice_id': key.split('/')[-1].replace('.pdf', '')
+            }
+            
+            response = sfn_client.start_execution(
+                stateMachineArn=STATE_MACHINE_ARN,
+                input=json.dumps(execution_input)
+            )
+            
+            print(f"Started execution: {response['executionArn']}")
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Step Functions triggered successfully')
+    }
+      `),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        STATE_MACHINE_ARN: this.invoiceProcessingStateMachine.stateMachineArn,
+      },
+    });
+
+    // Grant Lambda permission to start Step Functions executions
+    this.invoiceProcessingStateMachine.grantStartExecution(s3TriggerLambda);
+
+    // Grant Lambda permission to read from S3
+    this.invoiceBucket.grantRead(s3TriggerLambda);
+
+    // Add S3 event notification to trigger Lambda on PDF upload
+    this.invoiceBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(s3TriggerLambda),
+      {
+        prefix: 'invoices/',
+        suffix: '.pdf',
+      }
+    );
+
+    // Output S3 trigger Lambda details
+    new cdk.CfnOutput(this, 'S3TriggerLambdaName', {
+      value: s3TriggerLambda.functionName,
+      description: 'S3 Trigger Lambda Function Name',
     });
   }
 }
