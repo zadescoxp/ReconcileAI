@@ -1,0 +1,4 @@
+# file: C:\Users\DELL\ReconcileAI\lambda\resolve-step\index.py
+# hypothesis_version: 6.151.9
+
+['#status', ':approved_date', ':flagged_date', ':status', 'ActionType', 'Actor', 'Approved', 'Details', 'EntityId', 'EntityType', 'Flagged', 'INVOICES_TABLE_NAME', 'Invoice', 'InvoiceApproved', 'InvoiceFlagged', 'InvoiceId', 'InvoiceNumber', 'Item', 'LogId', 'MatchedPOIds', 'ProcessingError', 'Reasoning', 'Status', 'System', 'Timestamp', 'TotalAmount', 'VendorName', 'Z', 'approval_type', 'automatic', 'discrepancies', 'discrepancy_count', 'dynamodb', 'error', 'fraud_flag_count', 'fraud_flags', 'invoice_id', 'invoice_number', 'matched_po_ids', 'reasoning', 'requires_review', 'resolve', 'status', 'step', 'total_amount', 'vendor_name']
