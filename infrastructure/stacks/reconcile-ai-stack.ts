@@ -712,6 +712,23 @@ def lambda_handler(event, context):
       })
     );
 
+    // Audit Logs Lambda Handler
+    const auditLogsLambda = new lambda.Function(this, 'AuditLogsLambda', {
+      functionName: 'ReconcileAI-AuditLogs',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/audit-logs')),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        AUDIT_LOGS_TABLE: this.auditLogsTable.tableName,
+      },
+    });
+
+    // Grant permissions
+    this.auditLogsTable.grantReadData(auditLogsLambda);
+
     // Create API resources and methods
 
     // /pos resource
@@ -841,6 +858,37 @@ def lambda_handler(event, context):
     rejectResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // /audit-logs resource
+    const auditLogsResource = this.api.root.addResource('audit-logs');
+    
+    // GET /audit-logs - Query audit logs (Admin only)
+    auditLogsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(auditLogsLambda, {
         proxy: true,
         integrationResponses: [
           {

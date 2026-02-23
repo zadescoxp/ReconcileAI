@@ -265,23 +265,23 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - **Property 42: Input Sanitization**
     - **Validates: Requirements 18.5**
 
-- [ ] 11. Audit Trail & Monitoring (Day 6-7)
-  - [ ] 11.1 Create audit trail component (Admin only)
+- [x] 11. Audit Trail & Monitoring (Day 6-7)
+  - [x] 11.1 Create audit trail component (Admin only)
     - Build search form (entity ID, actor, action type, date range)
     - Call API Gateway → Lambda to query AuditLogs table
     - Display audit logs in table with expandable details
     - Add export to CSV functionality
     - _Requirements: 10.6, 13.7_
   
-  - [ ] 11.2 Implement comprehensive audit logging
+  - [x] 11.2 Implement comprehensive audit logging
     - Ensure all Lambda functions log to AuditLogs
     - Include timestamp, actor, action type, entity ID, details
     - Include AI reasoning for matching decisions
     - Include approver identity for human actions
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
   
-  - [ ]* 11.3 Write property test for audit logging
-    - **Property 28: Comprehensive Audit Logging**
+  - [x] 11.3 Write property test for audit logging
+    - **Property 28: Comprehensive Audit Logging*
     - **Validates: Requirements 10.1, 10.4**
 
 - [ ] 12. Error Handling & Resilience (Day 7)
