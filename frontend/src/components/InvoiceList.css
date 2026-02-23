@@ -1,0 +1,152 @@
+.invoice-list-container {
+  padding: 20px;
+}
+
+.invoice-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.invoice-list-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.invoice-list-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invoice-list-filters label {
+  font-weight: 500;
+  color: #555;
+}
+
+.invoice-list-filters select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.invoice-list-loading,
+.invoice-list-error,
+.invoice-list-empty {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.invoice-list-error button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.invoice-list-error button:hover {
+  background-color: #0056b3;
+}
+
+.invoice-list-table-container {
+  overflow-x: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-list-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoice-list-table thead {
+  background-color: #f8f9fa;
+}
+
+.invoice-list-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.invoice-list-table td {
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.invoice-list-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-approved {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-flagged {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-processing {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.flag-indicator {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-right: 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flag-indicator.discrepancy {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.flag-indicator.fraud {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.btn-view-details {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-view-details:hover {
+  background-color: #0056b3;
+}

@@ -1,11 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
+import InvoiceList from '../components/InvoiceList';
+import InvoiceDetail from '../components/InvoiceDetail';
 
 const InvoicesPage: React.FC = () => {
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+
+  const handleInvoiceClick = (invoiceId: string) => {
+    setSelectedInvoiceId(invoiceId);
+  };
+
+  const handleBackToList = () => {
+    setSelectedInvoiceId(null);
+  };
+
   return (
     <div>
-      <h1>Invoices</h1>
-      <p>Review and approve invoices</p>
-      {/* Invoice review functionality will be implemented in Task 9 */}
+      {selectedInvoiceId ? (
+        <InvoiceDetail invoiceId={selectedInvoiceId} onBack={handleBackToList} />
+      ) : (
+        <InvoiceList onInvoiceClick={handleInvoiceClick} />
+      )}
     </div>
   );
 };
