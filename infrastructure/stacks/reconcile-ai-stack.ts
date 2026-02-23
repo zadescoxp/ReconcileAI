@@ -10,6 +10,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as path from 'path';
 
 export class ReconcileAIStack extends cdk.Stack {
@@ -26,6 +27,9 @@ export class ReconcileAIStack extends cdk.Stack {
   public readonly fraudDetectionLambda: lambda.Function;
   public readonly resolveStepLambda: lambda.Function;
   public readonly invoiceProcessingStateMachine: sfn.StateMachine;
+  public readonly poManagementLambda: lambda.Function;
+  public readonly invoiceManagementLambda: lambda.Function;
+  public readonly api: apigateway.RestApi;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -622,6 +626,264 @@ def lambda_handler(event, context):
     new cdk.CfnOutput(this, 'S3TriggerLambdaName', {
       value: s3TriggerLambda.functionName,
       description: 'S3 Trigger Lambda Function Name',
+    });
+
+    // ========================================
+    // API Gateway REST API with Cognito Authorizer
+    // ========================================
+
+    // Create Cognito Authorizer
+    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+      cognitoUserPools: [this.userPool],
+      authorizerName: 'ReconcileAI-Authorizer',
+      identitySource: 'method.request.header.Authorization',
+    });
+
+    // Create REST API
+    this.api = new apigateway.RestApi(this, 'ReconcileAIAPI', {
+      restApiName: 'ReconcileAI-API',
+      description: 'API for ReconcileAI invoice processing system',
+      deployOptions: {
+        stageName: 'prod',
+        tracingEnabled: true, // Enable X-Ray tracing
+        loggingLevel: apigateway.MethodLoggingLevel.INFO,
+        dataTraceEnabled: true,
+        metricsEnabled: true,
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS, // Configure specific origins in production
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [
+          'Content-Type',
+          'X-Amz-Date',
+          'Authorization',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+        ],
+        allowCredentials: true,
+      },
+      cloudWatchRole: true, // Enable CloudWatch logging
+    });
+
+    // PO Management Lambda Handler
+    this.poManagementLambda = new lambda.Function(this, 'POManagementLambda', {
+      functionName: 'ReconcileAI-POManagement',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/po-management')),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        POS_TABLE_NAME: this.posTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+      },
+    });
+
+    // Grant permissions
+    this.posTable.grantReadWriteData(this.poManagementLambda);
+    this.auditLogsTable.grantWriteData(this.poManagementLambda);
+
+    // Invoice Management Lambda Handler
+    this.invoiceManagementLambda = new lambda.Function(this, 'InvoiceManagementLambda', {
+      functionName: 'ReconcileAI-InvoiceManagement',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/invoice-management')),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        INVOICES_TABLE_NAME: this.invoicesTable.tableName,
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        STATE_MACHINE_ARN: this.invoiceProcessingStateMachine.stateMachineArn,
+      },
+    });
+
+    // Grant permissions
+    this.invoicesTable.grantReadWriteData(this.invoiceManagementLambda);
+    this.auditLogsTable.grantWriteData(this.invoiceManagementLambda);
+    this.invoiceProcessingStateMachine.grantStartExecution(this.invoiceManagementLambda);
+    this.invoiceManagementLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['states:SendTaskSuccess', 'states:SendTaskFailure'],
+        resources: [this.invoiceProcessingStateMachine.stateMachineArn],
+      })
+    );
+
+    // Create API resources and methods
+
+    // /pos resource
+    const posResource = this.api.root.addResource('pos');
+    
+    // POST /pos - Upload PO
+    posResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.poManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // GET /pos - Search POs
+    posResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.poManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // /invoices resource
+    const invoicesResource = this.api.root.addResource('invoices');
+    
+    // GET /invoices - Query invoices
+    invoicesResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // /invoices/{id} resource
+    const invoiceIdResource = invoicesResource.addResource('{id}');
+
+    // POST /invoices/{id}/approve - Approve invoice
+    const approveResource = invoiceIdResource.addResource('approve');
+    approveResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // POST /invoices/{id}/reject - Reject invoice
+    const rejectResource = invoiceIdResource.addResource('reject');
+    rejectResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // Output API Gateway details
+    new cdk.CfnOutput(this, 'APIGatewayURL', {
+      value: this.api.url,
+      description: 'API Gateway URL',
+    });
+
+    new cdk.CfnOutput(this, 'APIGatewayId', {
+      value: this.api.restApiId,
+      description: 'API Gateway REST API ID',
+    });
+
+    new cdk.CfnOutput(this, 'POManagementLambdaName', {
+      value: this.poManagementLambda.functionName,
+      description: 'PO Management Lambda Function Name',
+    });
+
+    new cdk.CfnOutput(this, 'InvoiceManagementLambdaName', {
+      value: this.invoiceManagementLambda.functionName,
+      description: 'Invoice Management Lambda Function Name',
     });
   }
 }

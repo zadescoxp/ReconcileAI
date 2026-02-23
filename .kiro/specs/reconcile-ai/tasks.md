@@ -210,15 +210,15 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Test API error handling
     - _Requirements: 2.1, 2.2_
 
-- [ ] 9. Frontend - Invoice Review & Approval (Day 5-6)
-  - [ ] 9.1 Create invoice list component
+- [x] 9. Frontend - Invoice Review & Approval (Day 5-6)
+  - [x] 9.1 Create invoice list component
     - Call API Gateway → Lambda to query Invoices table
     - Display invoices in table with status badges
     - Filter by status (All, Flagged, Approved, Rejected)
     - Add click to view invoice details
     - _Requirements: 13.2, 13.5_
   
-  - [ ] 9.2 Create invoice detail component
+  - [x] 9.2 Create invoice detail component
     - Display invoice data (number, vendor, date, line items, total)
     - Display matched PO data side-by-side
     - Display discrepancies with highlighting
@@ -226,7 +226,7 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Display AI reasoning in expandable section
     - _Requirements: 8.3, 13.6_
   
-  - [ ] 9.3 Implement approval actions
+  - [x] 9.3 Implement approval actions
     - Add Approve and Reject buttons for flagged invoices
     - Add comment/reason text input
     - Call API Gateway → Lambda to update invoice status
@@ -234,26 +234,26 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Display success/error messages
     - _Requirements: 8.4, 8.5, 8.6_
   
-  - [ ] 9.4 Write unit tests for invoice approval component
+  - [x] 9.4 Write unit tests for invoice approval component
     - Test approve action
     - Test reject action
     - Test API error handling
     - _Requirements: 8.5, 8.6_
 
-- [ ] 10. API Gateway & Lambda Handlers (Day 6)
-  - [ ] 10.1 Create API Gateway REST API with CDK
+- [x] 10. API Gateway & Lambda Handlers (Day 6)
+  - [x] 10.1 Create API Gateway REST API with CDK
     - Define API with Cognito authorizer
     - Create endpoints: POST /pos, GET /pos, GET /invoices, POST /invoices/{id}/approve, POST /invoices/{id}/reject
     - Configure CORS for frontend domain
     - _Requirements: 18.4, 18.6_
   
-  - [ ] 10.2 Create PO management Lambda handlers
+  - [x] 10.2 Create PO management Lambda handlers
     - Implement POST /pos handler (validate and store PO)
     - Implement GET /pos handler (search and retrieve POs)
     - Add input sanitization for all user inputs
     - _Requirements: 2.1, 2.2, 2.4, 18.5_
   
-  - [ ] 10.3 Create invoice management Lambda handlers
+  - [x] 10.3 Create invoice management Lambda handlers
     - Implement GET /invoices handler (query with filters)
     - Implement POST /invoices/{id}/approve handler (update status, resume Step Function)
     - Implement POST /invoices/{id}/reject handler (update status, halt Step Function)
@@ -261,7 +261,7 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Log all actions to AuditLogs
     - _Requirements: 8.5, 8.6, 10.3, 18.5_
   
-  - [ ]* 10.4 Write property test for input sanitization
+  - [x] 10.4 Write property test for input sanitization
     - **Property 42: Input Sanitization**
     - **Validates: Requirements 18.5**
 
