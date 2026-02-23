@@ -163,29 +163,29 @@ This is an aggressive 1-week implementation plan focused on delivering a working
   - Verify flagged invoice pauses for approval
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Frontend - Authentication & Layout (Day 4-5)
-  - [ ] 7.1 Initialize React app with AWS Amplify
+- [x] 7. Frontend - Authentication & Layout (Day 4-5)
+  - [x] 7.1 Initialize React app with AWS Amplify
     - Create React app with TypeScript
     - Install Amplify libraries (@aws-amplify/ui-react, aws-amplify)
     - Configure Amplify with Cognito User Pool
     - Set up Amplify hosting
     - _Requirements: 13.1, 1.1_
   
-  - [ ] 7.2 Implement authentication UI
+  - [x] 7.2 Implement authentication UI
     - Create login page with Amplify Authenticator component
     - Implement role-based routing (Admin vs User)
     - Add logout functionality
     - Store user session and role in context
     - _Requirements: 1.3, 1.4, 1.5_
   
-  - [ ] 7.3 Create main dashboard layout
+  - [x] 7.3 Create main dashboard layout
     - Create navigation bar with user info and logout
     - Create sidebar with menu items (Dashboard, POs, Invoices, Audit Trail)
     - Create responsive layout with React Router
     - _Requirements: 13.2_
 
-- [ ] 8. Frontend - PO Management (Day 5)
-  - [ ] 8.1 Create PO upload component
+- [x] 8. Frontend - PO Management (Day 5)
+  - [x] 8.1 Create PO upload component
     - Build file upload UI with drag-and-drop
     - Parse uploaded CSV/JSON file for PO data
     - Validate PO has required fields
@@ -193,18 +193,18 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Display success/error messages
     - _Requirements: 2.1, 2.2, 13.3_
   
-  - [ ] 8.2 Create PO search and list component
+  - [x] 8.2 Create PO search and list component
     - Build search form (PO number, vendor name, date range)
     - Call API Gateway → Lambda to query DynamoDB
     - Display PO list in table with pagination
     - Add click to view PO details
     - _Requirements: 2.4, 13.4_
   
-  - [ ] 8.3 Write property test for PO validation
+  - [x] 8.3 Write property test for PO validation
     - **Property 2: PO Validation Completeness**
     - **Validates: Requirements 2.1**
   
-  - [ ] 8.4 Write unit tests for PO upload component
+  - [x] 8.4 Write unit tests for PO upload component
     - Test file upload with valid PO
     - Test file upload with invalid PO
     - Test API error handling
