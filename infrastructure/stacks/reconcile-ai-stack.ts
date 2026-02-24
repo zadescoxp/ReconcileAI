@@ -11,6 +11,8 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as path from 'path';
 
 export class ReconcileAIStack extends cdk.Stack {
@@ -30,6 +32,7 @@ export class ReconcileAIStack extends cdk.Stack {
   public readonly poManagementLambda: lambda.Function;
   public readonly invoiceManagementLambda: lambda.Function;
   public readonly api: apigateway.RestApi;
+  public readonly adminNotificationTopic: sns.Topic;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -308,6 +311,36 @@ export class ReconcileAIStack extends cdk.Stack {
     });
 
     // ========================================
+    // SNS Topic for Admin Notifications
+    // ========================================
+
+    this.adminNotificationTopic = new sns.Topic(this, 'AdminNotificationTopic', {
+      topicName: 'ReconcileAI-AdminNotifications',
+      displayName: 'ReconcileAI Admin Notifications',
+      fifo: false,
+    });
+
+    // Add email subscription (configure admin email via parameter or manually)
+    // Note: Email subscriptions require confirmation
+    // Admins can subscribe via AWS Console or CLI after deployment
+    
+    // Output SNS topic details
+    new cdk.CfnOutput(this, 'AdminNotificationTopicArn', {
+      value: this.adminNotificationTopic.topicArn,
+      description: 'SNS Topic ARN for admin notifications',
+    });
+
+    new cdk.CfnOutput(this, 'AdminNotificationTopicName', {
+      value: this.adminNotificationTopic.topicName,
+      description: 'SNS Topic Name for admin notifications',
+    });
+
+    new cdk.CfnOutput(this, 'SNSSubscriptionInstructions', {
+      value: 'Subscribe admin emails to the SNS topic via AWS Console or CLI',
+      description: 'Instructions for subscribing to notifications',
+    });
+
+    // ========================================
     // Lambda Functions
     // ========================================
 
@@ -323,6 +356,7 @@ export class ReconcileAIStack extends cdk.Stack {
       environment: {
         INVOICES_TABLE_NAME: this.invoicesTable.tableName,
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        SNS_TOPIC_ARN: this.adminNotificationTopic.topicArn,
       },
       layers: [
         // Lambda layer for pdfplumber will be created separately
@@ -336,6 +370,9 @@ export class ReconcileAIStack extends cdk.Stack {
     // Grant Lambda permissions to write to DynamoDB tables
     this.invoicesTable.grantWriteData(this.pdfExtractionLambda);
     this.auditLogsTable.grantWriteData(this.pdfExtractionLambda);
+
+    // Grant Lambda permissions to publish to SNS
+    this.adminNotificationTopic.grantPublish(this.pdfExtractionLambda);
 
     // Output Lambda function name
     new cdk.CfnOutput(this, 'PDFExtractionLambdaName', {
@@ -362,6 +399,7 @@ export class ReconcileAIStack extends cdk.Stack {
         INVOICES_TABLE_NAME: this.invoicesTable.tableName,
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
         AWS_REGION: this.region,
+        SNS_TOPIC_ARN: this.adminNotificationTopic.topicArn,
       },
     });
 
@@ -373,6 +411,9 @@ export class ReconcileAIStack extends cdk.Stack {
 
     // Grant Lambda permissions to write to AuditLogs table
     this.auditLogsTable.grantWriteData(this.aiMatchingLambda);
+
+    // Grant Lambda permissions to publish to SNS
+    this.adminNotificationTopic.grantPublish(this.aiMatchingLambda);
 
     // Grant Lambda permissions to invoke Bedrock
     this.aiMatchingLambda.addToRolePolicy(
@@ -409,6 +450,7 @@ export class ReconcileAIStack extends cdk.Stack {
         POS_TABLE_NAME: this.posTable.tableName,
         INVOICES_TABLE_NAME: this.invoicesTable.tableName,
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        SNS_TOPIC_ARN: this.adminNotificationTopic.topicArn,
       },
     });
 
@@ -416,6 +458,9 @@ export class ReconcileAIStack extends cdk.Stack {
     this.posTable.grantReadData(this.fraudDetectionLambda);
     this.invoicesTable.grantReadWriteData(this.fraudDetectionLambda);
     this.auditLogsTable.grantWriteData(this.fraudDetectionLambda);
+
+    // Grant Lambda permissions to publish to SNS
+    this.adminNotificationTopic.grantPublish(this.fraudDetectionLambda);
 
     // Output Lambda function details
     new cdk.CfnOutput(this, 'FraudDetectionLambdaName', {
