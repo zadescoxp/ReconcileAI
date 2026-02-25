@@ -211,8 +211,8 @@ export class ReconcileAIStack extends cdk.Stack {
         },
       },
       customAttributes: {
-        role: new cognito.StringAttribute({ 
-          minLen: 4, 
+        role: new cognito.StringAttribute({
+          minLen: 4,
           maxLen: 10,
           mutable: true,
         }),
@@ -323,7 +323,7 @@ export class ReconcileAIStack extends cdk.Stack {
     // Add email subscription (configure admin email via parameter or manually)
     // Note: Email subscriptions require confirmation
     // Admins can subscribe via AWS Console or CLI after deployment
-    
+
     // Output SNS topic details
     new cdk.CfnOutput(this, 'AdminNotificationTopicArn', {
       value: this.adminNotificationTopic.topicArn,
@@ -398,7 +398,6 @@ export class ReconcileAIStack extends cdk.Stack {
         POS_TABLE_NAME: this.posTable.tableName,
         INVOICES_TABLE_NAME: this.invoicesTable.tableName,
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
-        AWS_REGION: this.region,
         SNS_TOPIC_ARN: this.adminNotificationTopic.topicArn,
       },
     });
@@ -778,7 +777,7 @@ def lambda_handler(event, context):
 
     // /pos resource
     const posResource = this.api.root.addResource('pos');
-    
+
     // POST /pos - Upload PO
     posResource.addMethod(
       'POST',
@@ -837,7 +836,7 @@ def lambda_handler(event, context):
 
     // /invoices resource
     const invoicesResource = this.api.root.addResource('invoices');
-    
+
     // GET /invoices - Query invoices
     invoicesResource.addMethod(
       'GET',
@@ -929,7 +928,7 @@ def lambda_handler(event, context):
 
     // /audit-logs resource
     const auditLogsResource = this.api.root.addResource('audit-logs');
-    
+
     // GET /audit-logs - Query audit logs (Admin only)
     auditLogsResource.addMethod(
       'GET',
