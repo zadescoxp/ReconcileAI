@@ -62,11 +62,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onInvoiceClick }) => {
     }
   };
 
-  const formatCurrency = (amount: number): string => {
+  const formatCurrency = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(numAmount);
   };
 
   if (loading) {

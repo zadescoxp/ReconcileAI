@@ -1,0 +1,31 @@
+{
+    "ReconcileAI-dev":  {
+                            "UserPoolId":  "us-east-1_hhL58Toj6",
+                            "ResolveStepLambdaName":  "ReconcileAI-ResolveStep",
+                            "AuditLogsTableName":  "ReconcileAI-AuditLogs",
+                            "SNSSubscriptionInstructions":  "Subscribe admin emails to the SNS topic via AWS Console or CLI",
+                            "InvoiceManagementLambdaName":  "ReconcileAI-InvoiceManagement",
+                            "POsTableName":  "ReconcileAI-POs",
+                            "APIGatewayURL":  "https://anr0mybpyb.execute-api.us-east-1.amazonaws.com/prod/",
+                            "PDFExtractionLambdaName":  "ReconcileAI-PDFExtraction",
+                            "AIMatchingLambdaArn":  "arn:aws:lambda:us-east-1:463470938082:function:ReconcileAI-AIMatching",
+                            "FraudDetectionLambdaArn":  "arn:aws:lambda:us-east-1:463470938082:function:ReconcileAI-FraudDetection",
+                            "APIGatewayId":  "anr0mybpyb",
+                            "InvoicesTableName":  "ReconcileAI-Invoices",
+                            "PDFExtractionLambdaArn":  "arn:aws:lambda:us-east-1:463470938082:function:ReconcileAI-PDFExtraction",
+                            "UserPoolClientId":  "23pakl3uauefnkp2dfglp249gh",
+                            "AIMatchingLambdaName":  "ReconcileAI-AIMatching",
+                            "StateMachineArn":  "arn:aws:states:us-east-1:463470938082:stateMachine:ReconcileAI-InvoiceProcessing",
+                            "ResolveStepLambdaArn":  "arn:aws:lambda:us-east-1:463470938082:function:ReconcileAI-ResolveStep",
+                            "AdminNotificationTopicName":  "ReconcileAI-AdminNotifications",
+                            "SESSetupInstructions":  "See docs/SES_SETUP.md for email verification and configuration steps",
+                            "AdminNotificationTopicArn":  "arn:aws:sns:us-east-1:463470938082:ReconcileAI-AdminNotifications",
+                            "InvoiceBucketName":  "reconcileai-invoices-463470938082",
+                            "S3TriggerLambdaName":  "ReconcileAI-S3Trigger",
+                            "SESRuleSetName":  "ReconcileAI-RuleSet",
+                            "ReconcileAIAPIEndpoint53FC2F46":  "https://anr0mybpyb.execute-api.us-east-1.amazonaws.com/prod/",
+                            "POManagementLambdaName":  "ReconcileAI-POManagement",
+                            "StateMachineName":  "ReconcileAI-InvoiceProcessing",
+                            "FraudDetectionLambdaName":  "ReconcileAI-FraudDetection"
+                        }
+}

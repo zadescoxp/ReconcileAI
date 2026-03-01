@@ -52,7 +52,7 @@ export interface Invoice {
   InvoiceNumber: string;
   InvoiceDate: string;
   LineItems: LineItem[];
-  TotalAmount: number;
+  TotalAmount: number | string;
   Status: InvoiceStatus;
   MatchedPOIds: string[];
   Discrepancies: Discrepancy[];

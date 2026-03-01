@@ -1,7 +1,34 @@
 // Audit Service for API interactions
 import { AuditLog, AuditFilter } from '../types/audit';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:3001/api';
+
+/**
+ * Get authentication headers with Cognito token
+ */
+async function getAuthHeaders(): Promise<HeadersInit> {
+  try {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    
+    if (idToken) {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      };
+    }
+    
+    return {
+      'Content-Type': 'application/json'
+    };
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return {
+      'Content-Type': 'application/json'
+    };
+  }
+}
 
 export class AuditService {
   /**
@@ -16,7 +43,10 @@ export class AuditService {
       if (filter.dateFrom) params.append('dateFrom', filter.dateFrom);
       if (filter.dateTo) params.append('dateTo', filter.dateTo);
 
-      const response = await fetch(`${API_ENDPOINT}/audit-logs?${params.toString()}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_ENDPOINT}/audit-logs?${params.toString()}`, {
+        headers
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch audit logs');

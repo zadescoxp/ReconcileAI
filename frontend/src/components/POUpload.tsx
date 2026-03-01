@@ -187,7 +187,7 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
             </div>
             <div className="data-row">
               <span className="data-label">Total Amount:</span>
-              <span className="data-value">${parsedData.totalAmount.toFixed(2)}</span>
+              <span className="data-value">${Number(parsedData.totalAmount).toFixed(2)}</span>
             </div>
             <div className="data-row">
               <span className="data-label">Line Items:</span>
@@ -213,8 +213,8 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
                     <td>{item.LineNumber}</td>
                     <td>{item.ItemDescription}</td>
                     <td>{item.Quantity}</td>
-                    <td>${item.UnitPrice.toFixed(2)}</td>
-                    <td>${item.TotalPrice.toFixed(2)}</td>
+                    <td>${Number(item.UnitPrice).toFixed(2)}</td>
+                    <td>${Number(item.TotalPrice).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>

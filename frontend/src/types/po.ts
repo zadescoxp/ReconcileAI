@@ -1,12 +1,12 @@
 // Purchase Order types for ReconcileAI
 
 export interface LineItem {
-  LineNumber: number;
+  LineNumber: number | string;
   ItemDescription: string;
-  Quantity: number;
-  UnitPrice: number;
-  TotalPrice: number;
-  MatchedQuantity?: number;
+  Quantity: number | string;
+  UnitPrice: number | string;
+  TotalPrice: number | string;
+  MatchedQuantity?: number | string;
 }
 
 export enum POStatus {

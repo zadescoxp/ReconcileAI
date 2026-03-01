@@ -301,15 +301,15 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - **Property 31: Step Function Retry Logic**
     - **Validates: Requirements 11.4, 16.1**
 
-- [ ] 13. Final Integration & Testing (Day 7)
-  - [ ] 13.1 Deploy full stack to AWS
+- [x] 13. Final Integration & Testing (Day 7)
+  - [x] 13.1 Deploy full stack to AWS
     - Deploy CDK infrastructure (DynamoDB, S3, Lambda, Step Functions, API Gateway)
     - Deploy Amplify frontend
     - Configure environment variables
     - Verify all services are connected
     - _Requirements: All_
   
-  - [ ] 13.2 End-to-end testing
+  - [x] 13.2 End-to-end testing
     - Test email ingestion → PDF extraction → AI matching → fraud detection → approval
     - Test PO upload and search
     - Test invoice approval and rejection
@@ -317,7 +317,7 @@ This is an aggressive 1-week implementation plan focused on delivering a working
     - Verify AWS Free Tier usage is within limits
     - _Requirements: All_
   
-  - [ ] 13.3 Create demo data and walkthrough
+  - [x] 13.3 Create demo data and walkthrough
     - Upload sample POs
     - Send sample invoice emails
     - Demonstrate auto-approval for perfect match

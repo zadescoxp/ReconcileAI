@@ -1,7 +1,34 @@
 // PO Service for API interactions
 import { PO, POMetadata, POSearchQuery, POUploadResult, LineItem } from '../types/po';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:3001/api';
+
+/**
+ * Get authentication headers with Cognito token
+ */
+async function getAuthHeaders(): Promise<HeadersInit> {
+  try {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    
+    if (idToken) {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      };
+    }
+    
+    return {
+      'Content-Type': 'application/json'
+    };
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return {
+      'Content-Type': 'application/json'
+    };
+  }
+}
 
 export class POService {
   /**
@@ -19,11 +46,10 @@ export class POService {
         };
       }
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_ENDPOINT}/pos`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           ...metadata,
           uploadedBy: userId
@@ -66,7 +92,10 @@ export class POService {
       if (query.dateFrom) params.append('dateFrom', query.dateFrom);
       if (query.dateTo) params.append('dateTo', query.dateTo);
 
-      const response = await fetch(`${API_ENDPOINT}/pos?${params.toString()}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_ENDPOINT}/pos?${params.toString()}`, {
+        headers
+      });
       
       if (!response.ok) {
         throw new Error('Failed to search POs');
@@ -85,7 +114,10 @@ export class POService {
    */
   static async getPOById(poId: string): Promise<PO | null> {
     try {
-      const response = await fetch(`${API_ENDPOINT}/pos/${poId}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_ENDPOINT}/pos/${poId}`, {
+        headers
+      });
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -141,7 +173,7 @@ export class POService {
             });
           }
 
-          const totalAmount = lineItems.reduce((sum, item) => sum + item.TotalPrice, 0);
+          const totalAmount = lineItems.reduce((sum, item) => sum + Number(item.TotalPrice), 0);
 
           resolve({
             vendorName,
@@ -184,7 +216,7 @@ export class POService {
             TotalPrice: parseFloat(item.TotalPrice || item.totalPrice || '0')
           }));
 
-          const totalAmount = lineItems.reduce((sum, item) => sum + item.TotalPrice, 0);
+          const totalAmount = lineItems.reduce((sum, item) => sum + Number(item.TotalPrice), 0);
 
           resolve({
             vendorName: data.vendorName,
@@ -224,10 +256,10 @@ export class POService {
       if (!item.ItemDescription || item.ItemDescription.trim() === '') {
         errors.push(`Line item ${index + 1}: Item description is required`);
       }
-      if (item.Quantity <= 0) {
+      if (Number(item.Quantity) <= 0) {
         errors.push(`Line item ${index + 1}: Quantity must be greater than 0`);
       }
-      if (item.UnitPrice <= 0) {
+      if (Number(item.UnitPrice) <= 0) {
         errors.push(`Line item ${index + 1}: Unit price must be greater than 0`);
       }
     });

@@ -45,11 +45,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack }) => {
     }
   };
 
-  const formatCurrency = (amount: number): string => {
+  const formatCurrency = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(numAmount);
   };
 
   const getDiscrepancyTypeLabel = (type: DiscrepancyType): string => {

@@ -152,7 +152,7 @@ const POSearch: React.FC<POSearchProps> = ({ onPOSelect, refreshTrigger }) => {
                   <tr key={po.POId}>
                     <td>{po.PONumber}</td>
                     <td>{po.VendorName}</td>
-                    <td>${po.TotalAmount.toFixed(2)}</td>
+                    <td>${Number(po.TotalAmount).toFixed(2)}</td>
                     <td>{new Date(po.UploadDate).toLocaleDateString()}</td>
                     <td>
                       <span className={`status-badge status-${po.Status.toLowerCase()}`}>
@@ -220,7 +220,7 @@ const POSearch: React.FC<POSearchProps> = ({ onPOSelect, refreshTrigger }) => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Total Amount:</span>
-                    <span className="detail-value">${selectedPO.TotalAmount.toFixed(2)}</span>
+                    <span className="detail-value">${Number(selectedPO.TotalAmount).toFixed(2)}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Upload Date:</span>
@@ -262,8 +262,8 @@ const POSearch: React.FC<POSearchProps> = ({ onPOSelect, refreshTrigger }) => {
                         <td>{item.LineNumber}</td>
                         <td>{item.ItemDescription}</td>
                         <td>{item.Quantity}</td>
-                        <td>${item.UnitPrice.toFixed(2)}</td>
-                        <td>${item.TotalPrice.toFixed(2)}</td>
+                        <td>${Number(item.UnitPrice).toFixed(2)}</td>
+                        <td>${Number(item.TotalPrice).toFixed(2)}</td>
                         {selectedPO.LineItems.some(i => i.MatchedQuantity !== undefined) && (
                           <td>{item.MatchedQuantity || 0}</td>
                         )}
