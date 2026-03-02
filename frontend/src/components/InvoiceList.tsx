@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Invoice, InvoiceStatus, InvoiceFilter } from '../types/invoice';
 import { InvoiceService } from '../services/invoiceService';
 import './InvoiceList.css';
@@ -12,16 +12,46 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onInvoiceClick }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadInvoices();
   }, [statusFilter]);
 
-  const loadInvoices = async () => {
+  // Auto-refresh for processing invoices
+  useEffect(() => {
+    if (autoRefresh) {
+      pollingIntervalRef.current = setInterval(() => {
+        const hasProcessingInvoices = invoices.some(inv =>
+          [InvoiceStatus.RECEIVED, InvoiceStatus.EXTRACTING,
+          InvoiceStatus.MATCHING, InvoiceStatus.DETECTING].includes(inv.Status)
+        );
+
+        if (hasProcessingInvoices) {
+          loadInvoices(true); // Silent refresh
+        }
+      }, 5000); // Poll every 5 seconds
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [autoRefresh, invoices]);
+
+  const loadInvoices = async (silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       setError(null);
-      
+
       const filter: InvoiceFilter = {};
       if (statusFilter !== 'All') {
         filter.status = statusFilter;
@@ -29,10 +59,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onInvoiceClick }) => {
 
       const data = await InvoiceService.getInvoices(filter);
       setInvoices(data);
+      setLastRefresh(new Date());
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -78,7 +110,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onInvoiceClick }) => {
     return (
       <div className="invoice-list-error">
         <p>Error loading invoices: {error}</p>
-        <button onClick={loadInvoices}>Retry</button>
+        <button onClick={() => loadInvoices()}>Retry</button>
       </div>
     );
   }
@@ -87,22 +119,47 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onInvoiceClick }) => {
     <div className="invoice-list-container">
       <div className="invoice-list-header">
         <h2>Invoices</h2>
-        <div className="invoice-list-filters">
-          <label htmlFor="status-filter">Filter by Status:</label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'All')}
-          >
-            <option value="All">All</option>
-            <option value={InvoiceStatus.FLAGGED}>Flagged</option>
-            <option value={InvoiceStatus.APPROVED}>Approved</option>
-            <option value={InvoiceStatus.REJECTED}>Rejected</option>
-            <option value={InvoiceStatus.RECEIVED}>Received</option>
-            <option value={InvoiceStatus.EXTRACTING}>Extracting</option>
-            <option value={InvoiceStatus.MATCHING}>Matching</option>
-            <option value={InvoiceStatus.DETECTING}>Detecting</option>
-          </select>
+        <div className="invoice-list-controls">
+          <div className="refresh-controls">
+            <button
+              className="btn-refresh"
+              onClick={() => loadInvoices()}
+              disabled={loading || isRefreshing}
+            >
+              <span className={isRefreshing ? 'spinning' : ''}>↻</span> Refresh
+            </button>
+            <label className="auto-refresh-toggle">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+              />
+              Auto-refresh
+            </label>
+            {isRefreshing && (
+              <span className="refresh-indicator">Updating...</span>
+            )}
+            <span className="last-refresh">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </span>
+          </div>
+          <div className="invoice-list-filters">
+            <label htmlFor="status-filter">Filter by Status:</label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'All')}
+            >
+              <option value="All">All</option>
+              <option value={InvoiceStatus.FLAGGED}>Flagged</option>
+              <option value={InvoiceStatus.APPROVED}>Approved</option>
+              <option value={InvoiceStatus.REJECTED}>Rejected</option>
+              <option value={InvoiceStatus.RECEIVED}>Received</option>
+              <option value={InvoiceStatus.EXTRACTING}>Extracting</option>
+              <option value={InvoiceStatus.MATCHING}>Matching</option>
+              <option value={InvoiceStatus.DETECTING}>Detecting</option>
+            </select>
+          </div>
         </div>
       </div>
 

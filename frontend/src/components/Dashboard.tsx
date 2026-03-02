@@ -7,6 +7,7 @@ import DashboardHome from '../pages/DashboardHome';
 import POsPage from '../pages/POsPage';
 import InvoicesPage from '../pages/InvoicesPage';
 import AuditTrailPage from '../pages/AuditTrailPage';
+import EmailConfigPage from '../pages/EmailConfigPage';
 import ProtectedRoute from './ProtectedRoute';
 
 const Dashboard: React.FC = () => {
@@ -19,13 +20,21 @@ const Dashboard: React.FC = () => {
           <Route index element={<DashboardHome />} />
           <Route path="pos" element={<POsPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
-          <Route 
-            path="audit" 
+          <Route
+            path="audit"
             element={
               <ProtectedRoute requiredRole={Role.ADMIN}>
                 <AuditTrailPage />
               </ProtectedRoute>
-            } 
+            }
+          />
+          <Route
+            path="email-config"
+            element={
+              <ProtectedRoute requiredRole={Role.ADMIN}>
+                <EmailConfigPage />
+              </ProtectedRoute>
+            }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

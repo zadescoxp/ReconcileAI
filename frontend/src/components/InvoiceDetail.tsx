@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { InvoiceDetail as InvoiceDetailType, DiscrepancyType, Severity, InvoiceStatus } from '../types/invoice';
 import { InvoiceService } from '../services/invoiceService';
 import { useAuth } from '../contexts/AuthContext';
+import WorkflowTracker from './WorkflowTracker';
 import './InvoiceDetail.css';
 
 interface InvoiceDetailProps {
@@ -93,10 +94,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack }) => {
       setActionSuccess(null);
 
       await InvoiceService.approveInvoice(invoiceId, comment, user.userId);
-      
+
       setActionSuccess('Invoice approved successfully');
       setComment('');
-      
+
       // Reload invoice details to show updated status
       setTimeout(() => {
         loadInvoiceDetail();
@@ -125,10 +126,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack }) => {
       setActionSuccess(null);
 
       await InvoiceService.rejectInvoice(invoiceId, comment, user.userId);
-      
+
       setActionSuccess('Invoice rejected successfully');
       setComment('');
-      
+
       // Reload invoice details to show updated status
       setTimeout(() => {
         loadInvoiceDetail();
@@ -169,6 +170,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack }) => {
       </div>
 
       <div className="invoice-detail-content">
+        {/* Workflow Tracker */}
+        <WorkflowTracker
+          currentStatus={invoice.Status}
+          receivedDate={invoice.ReceivedDate}
+          error={error || undefined}
+        />
+
         {/* Invoice Information */}
         <div className="detail-section">
           <h3>Invoice Information</h3>
@@ -343,13 +351,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack }) => {
         {canTakeAction() && (
           <div className="detail-section approval-actions-section">
             <h3>Approval Actions</h3>
-            
+
             {actionSuccess && (
               <div className="action-message action-success">
                 {actionSuccess}
               </div>
             )}
-            
+
             {actionError && (
               <div className="action-message action-error">
                 {actionError}
