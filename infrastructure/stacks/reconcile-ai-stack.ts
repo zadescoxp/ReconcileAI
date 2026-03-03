@@ -868,6 +868,34 @@ def lambda_handler(event, context):
     // /invoices/{id} resource
     const invoiceIdResource = invoicesResource.addResource('{id}');
 
+    // GET /invoices/{id} - Get invoice details
+    invoiceIdResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
     // POST /invoices/{id}/approve - Approve invoice
     const approveResource = invoiceIdResource.addResource('approve');
     approveResource.addMethod(

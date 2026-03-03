@@ -3,11 +3,23 @@ import { AuditService } from '../services/auditService';
 import { AuditLog, AuditFilter, ActionType } from '../types/audit';
 import './AuditTrailPage.css';
 
+interface PipelineStatus {
+  entityId: string;
+  currentStage: string;
+  stages: {
+    name: string;
+    status: 'completed' | 'in-progress' | 'pending' | 'error';
+    timestamp?: string;
+  }[];
+}
+
 const AuditTrailPage: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [showPipeline, setShowPipeline] = useState(true);
+  const [pipelineStatuses, setPipelineStatuses] = useState<PipelineStatus[]>([]);
   
   // Filter state
   const [filter, setFilter] = useState<AuditFilter>({
@@ -28,12 +40,89 @@ const AuditTrailPage: React.FC = () => {
     try {
       const auditLogs = await AuditService.getAuditLogs(filter);
       setLogs(auditLogs);
+      
+      // Build pipeline statuses from logs
+      const pipelines = buildPipelineStatuses(auditLogs);
+      setPipelineStatuses(pipelines);
     } catch (err) {
       setError('Failed to load audit logs. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildPipelineStatuses = (logs: AuditLog[]): PipelineStatus[] => {
+    // Group logs by invoice entity
+    const invoiceLogs = logs.filter(log => log.EntityType === 'Invoice');
+    const invoiceGroups = new Map<string, AuditLog[]>();
+    
+    invoiceLogs.forEach(log => {
+      const existing = invoiceGroups.get(log.EntityId) || [];
+      existing.push(log);
+      invoiceGroups.set(log.EntityId, existing);
+    });
+    
+    // Build pipeline status for each invoice
+    const pipelines: PipelineStatus[] = [];
+    
+    invoiceGroups.forEach((logs, entityId) => {
+      const sortedLogs = logs.sort((a, b) => 
+        new Date(a.Timestamp).getTime() - new Date(b.Timestamp).getTime()
+      );
+      
+      const stageOrder = [
+        'InvoiceReceived',
+        'InvoiceExtracted',
+        'InvoiceMatched',
+        'FraudDetected',
+        'InvoiceApproved'
+      ];
+      
+      const stages: {
+        name: string;
+        status: 'completed' | 'in-progress' | 'pending' | 'error';
+        timestamp?: string;
+      }[] = stageOrder.map(stageName => {
+        const log = sortedLogs.find(l => l.ActionType === stageName);
+        if (log) {
+          return {
+            name: stageName,
+            status: 'completed' as const,
+            timestamp: log.Timestamp
+          };
+        }
+        return {
+          name: stageName,
+          status: 'pending' as const
+        };
+      });
+      
+      // Determine current stage - find last completed stage
+      let lastCompletedIndex = -1;
+      for (let i = stages.length - 1; i >= 0; i--) {
+        if (stages[i].status === 'completed') {
+          lastCompletedIndex = i;
+          break;
+        }
+      }
+      
+      if (lastCompletedIndex >= 0 && lastCompletedIndex < stages.length - 1) {
+        stages[lastCompletedIndex + 1].status = 'in-progress';
+      }
+      
+      const currentStage = stages.find(s => s.status === 'in-progress')?.name || 
+                          stages[lastCompletedIndex]?.name || 
+                          'Pending';
+      
+      pipelines.push({
+        entityId,
+        currentStage,
+        stages
+      });
+    });
+    
+    return pipelines.slice(0, 5); // Show top 5 recent invoices
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -84,6 +173,72 @@ const AuditTrailPage: React.FC = () => {
   return (
     <div className="audit-trail-page">
       <h1>Audit Trail</h1>
+      
+      {/* Pipeline Status Section */}
+      {showPipeline && pipelineStatuses.length > 0 && (
+        <div className="pipeline-section">
+          <div className="pipeline-header">
+            <h2>Invoice Processing Pipeline</h2>
+            <button 
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowPipeline(!showPipeline)}
+            >
+              Hide Pipeline
+            </button>
+          </div>
+          
+          <div className="pipeline-container">
+            {pipelineStatuses.map(pipeline => (
+              <div key={pipeline.entityId} className="pipeline-item">
+                <div className="pipeline-entity-id">
+                  Invoice: {pipeline.entityId}
+                  <span className="pipeline-current-stage">
+                    Current: {pipeline.currentStage}
+                  </span>
+                </div>
+                
+                <div className="pipeline-stages">
+                  {pipeline.stages.map((stage, index) => (
+                    <React.Fragment key={stage.name}>
+                      <div className={`pipeline-stage ${stage.status}`}>
+                        <div className="stage-icon">
+                          {stage.status === 'completed' && '✓'}
+                          {stage.status === 'in-progress' && '⟳'}
+                          {stage.status === 'pending' && '○'}
+                          {stage.status === 'error' && '✗'}
+                        </div>
+                        <div className="stage-name">
+                          {stage.name.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                        {stage.timestamp && (
+                          <div className="stage-time">
+                            {new Date(stage.timestamp).toLocaleTimeString()}
+                          </div>
+                        )}
+                      </div>
+                      {index < pipeline.stages.length - 1 && (
+                        <div className={`pipeline-arrow ${stage.status === 'completed' ? 'completed' : ''}`}>
+                          →
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {!showPipeline && (
+        <button 
+          className="btn btn-primary btn-sm"
+          onClick={() => setShowPipeline(true)}
+          style={{ marginBottom: '20px' }}
+        >
+          Show Pipeline
+        </button>
+      )}
       
       <div className="audit-search-form">
         <h2>Search Audit Logs</h2>
