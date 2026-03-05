@@ -721,12 +721,16 @@ def lambda_handler(event, context):
       environment: {
         POS_TABLE_NAME: this.posTable.tableName,
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        PDF_EXTRACTION_LAMBDA_NAME: this.pdfExtractionLambda.functionName,
+        INVOICE_BUCKET_NAME: this.invoiceBucket.bucketName,
       },
     });
 
     // Grant permissions
     this.posTable.grantReadWriteData(this.poManagementLambda);
     this.auditLogsTable.grantWriteData(this.poManagementLambda);
+    this.invoiceBucket.grantReadWrite(this.poManagementLambda);
+    this.pdfExtractionLambda.grantInvoke(this.poManagementLambda);
 
     // Invoice Management Lambda Handler
     this.invoiceManagementLambda = new lambda.Function(this, 'InvoiceManagementLambda', {
@@ -809,6 +813,35 @@ def lambda_handler(event, context):
     // GET /pos - Search POs
     posResource.addMethod(
       'GET',
+      new apigateway.LambdaIntegration(this.poManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // /pos/parse-pdf resource
+    const parsePdfResource = posResource.addResource('parse-pdf');
+    parsePdfResource.addMethod(
+      'POST',
       new apigateway.LambdaIntegration(this.poManagementLambda, {
         proxy: true,
         integrationResponses: [
@@ -961,6 +994,153 @@ def lambda_handler(event, context):
     auditLogsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(auditLogsLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // Email Configuration Lambda Handler
+    const emailConfigLambda = new lambda.Function(this, 'EmailConfigLambda', {
+      functionName: 'ReconcileAI-EmailConfig',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/email-config')),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
+        SES_RULE_SET_NAME: 'ReconcileAI-RuleSet',
+        INVOICE_BUCKET_NAME: this.invoiceBucket.bucketName,
+      },
+    });
+
+    // Grant permissions
+    this.auditLogsTable.grantWriteData(emailConfigLambda);
+    emailConfigLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ses:VerifyEmailIdentity',
+          'ses:DeleteIdentity',
+          'ses:ListIdentities',
+          'ses:GetIdentityVerificationAttributes',
+        ],
+        resources: ['*'],
+      })
+    );
+
+    // /email-config resource
+    const emailConfigResource = this.api.root.addResource('email-config');
+
+    // GET /email-config - List configured emails
+    emailConfigResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(emailConfigLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // POST /email-config - Add new email
+    emailConfigResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(emailConfigLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // DELETE /email-config - Remove email
+    emailConfigResource.addMethod(
+      'DELETE',
+      new apigateway.LambdaIntegration(emailConfigLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
+    // /email-config/resend resource
+    const resendResource = emailConfigResource.addResource('resend');
+    resendResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(emailConfigLambda, {
         proxy: true,
         integrationResponses: [
           {

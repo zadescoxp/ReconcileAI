@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { EmailConfigService } from '../services/emailConfigService';
 import './EmailConfigPage.css';
 
 interface EmailConfig {
@@ -19,15 +20,15 @@ const EmailConfigPage: React.FC = () => {
     }, []);
 
     const loadEmailConfigs = async () => {
-        // TODO: Implement API call to fetch email configurations
-        // For now, show placeholder data
-        setEmails([
-            {
-                email: 'invoices@reconcileai.com',
-                status: 'verified',
-                verifiedAt: new Date().toISOString()
-            }
-        ]);
+        setLoading(true);
+        const result = await EmailConfigService.listEmails();
+
+        if (result.error) {
+            setError(result.error);
+        } else if (result.data) {
+            setEmails(result.data);
+        }
+        setLoading(false);
     };
 
     const validateEmail = (email: string): boolean => {
@@ -51,25 +52,17 @@ const EmailConfigPage: React.FC = () => {
         }
 
         setLoading(true);
-        try {
-            // TODO: Implement API call to add email to SES
-            // For now, simulate the action
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        const result = await EmailConfigService.addEmail(newEmail);
 
-            const newConfig: EmailConfig = {
-                email: newEmail,
-                status: 'pending',
-            };
-
-            setEmails([...emails, newConfig]);
-            setNewEmail('');
+        if (result.error) {
+            setError(result.error);
+        } else if (result.data) {
             setSuccess(`Verification email sent to ${newEmail}. Please check your inbox and click the verification link.`);
-        } catch (err) {
-            setError('Failed to add email address. Please try again.');
-            console.error(err);
-        } finally {
-            setLoading(false);
+            setNewEmail('');
+            // Reload the list
+            await loadEmailConfigs();
         }
+        setLoading(false);
     };
 
     const handleRemoveEmail = async (email: string) => {
@@ -81,18 +74,16 @@ const EmailConfigPage: React.FC = () => {
         setError(null);
         setSuccess(null);
 
-        try {
-            // TODO: Implement API call to remove email from SES
-            await new Promise(resolve => setTimeout(resolve, 500));
+        const result = await EmailConfigService.removeEmail(email);
 
-            setEmails(emails.filter(e => e.email !== email));
+        if (result.error) {
+            setError(result.error);
+        } else if (result.data) {
             setSuccess(`Email address ${email} has been removed`);
-        } catch (err) {
-            setError('Failed to remove email address. Please try again.');
-            console.error(err);
-        } finally {
-            setLoading(false);
+            // Reload the list
+            await loadEmailConfigs();
         }
+        setLoading(false);
     };
 
     const handleResendVerification = async (email: string) => {
@@ -100,17 +91,14 @@ const EmailConfigPage: React.FC = () => {
         setError(null);
         setSuccess(null);
 
-        try {
-            // TODO: Implement API call to resend verification
-            await new Promise(resolve => setTimeout(resolve, 500));
+        const result = await EmailConfigService.resendVerification(email);
 
+        if (result.error) {
+            setError(result.error);
+        } else if (result.data) {
             setSuccess(`Verification email resent to ${email}`);
-        } catch (err) {
-            setError('Failed to resend verification email. Please try again.');
-            console.error(err);
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     const getStatusBadge = (status: string) => {

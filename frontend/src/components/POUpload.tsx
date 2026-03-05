@@ -58,11 +58,11 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
 
     // Validate file type
     const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
-    if (fileExtension !== 'csv' && fileExtension !== 'json') {
+    if (fileExtension !== 'csv' && fileExtension !== 'json' && fileExtension !== 'pdf') {
       setResult({
         success: false,
-        message: 'Invalid file type. Please upload a CSV or JSON file.',
-        errors: ['Only .csv and .json files are supported']
+        message: 'Invalid file type. Please upload a CSV, JSON, or PDF file.',
+        errors: ['Only .csv, .json, and .pdf files are supported']
       });
       return;
     }
@@ -74,8 +74,11 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
       let metadata: POMetadata;
       if (fileExtension === 'csv') {
         metadata = await POService.parseCSVFile(selectedFile);
-      } else {
+      } else if (fileExtension === 'json') {
         metadata = await POService.parseJSONFile(selectedFile);
+      } else {
+        // PDF file - upload to backend for parsing
+        metadata = await POService.parsePDFFile(selectedFile);
       }
       setParsedData(metadata);
     } catch (error) {
@@ -147,7 +150,7 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.json"
+          accept=".csv,.json,.pdf"
           onChange={handleFileInputChange}
           style={{ display: 'none' }}
         />
@@ -167,7 +170,7 @@ const POUpload: React.FC<POUploadProps> = ({ onUploadSuccess }) => {
             />
           </svg>
           <p className="drop-zone-text">
-            {file ? file.name : 'Drag and drop a CSV or JSON file here'}
+            {file ? file.name : 'Drag and drop a CSV, JSON, or PDF file here'}
           </p>
           <p className="drop-zone-subtext">or click to browse</p>
         </div>

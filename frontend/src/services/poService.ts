@@ -11,14 +11,14 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();
-    
+
     if (idToken) {
       return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${idToken}`
       };
     }
-    
+
     return {
       'Content-Type': 'application/json'
     };
@@ -96,7 +96,7 @@ export class POService {
       const response = await fetch(`${API_ENDPOINT}/pos?${params.toString()}`, {
         headers
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to search POs');
       }
@@ -118,7 +118,7 @@ export class POService {
       const response = await fetch(`${API_ENDPOINT}/pos/${poId}`, {
         headers
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
@@ -140,30 +140,30 @@ export class POService {
   static async parseCSVFile(file: File): Promise<POMetadata> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const text = e.target?.result as string;
           const lines = text.split('\n').filter(line => line.trim());
-          
+
           if (lines.length < 2) {
             throw new Error('CSV file is empty or invalid');
           }
 
           // Parse header
           const headers = lines[0].split(',').map(h => h.trim());
-          
+
           // Parse PO metadata from first data row
           const firstRow = lines[1].split(',').map(v => v.trim());
           const vendorName = firstRow[headers.indexOf('VendorName')] || '';
           const poNumber = firstRow[headers.indexOf('PONumber')] || '';
-          
+
           // Parse line items
           const lineItems: LineItem[] = [];
           for (let i = 1; i < lines.length; i++) {
             const values = lines[i].split(',').map(v => v.trim());
             if (values.length < headers.length) continue;
-            
+
             lineItems.push({
               LineNumber: i,
               ItemDescription: values[headers.indexOf('ItemDescription')] || '',
@@ -197,12 +197,12 @@ export class POService {
   static async parseJSONFile(file: File): Promise<POMetadata> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const text = e.target?.result as string;
           const data = JSON.parse(text);
-          
+
           // Validate required fields
           if (!data.vendorName || !data.poNumber || !data.lineItems) {
             throw new Error('Missing required fields in JSON');
@@ -231,6 +231,52 @@ export class POService {
 
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsText(file);
+    });
+  }
+
+  /**
+   * Parse PDF file to PO metadata using backend API
+   */
+  static async parsePDFFile(file: File): Promise<POMetadata> {
+    try {
+      // Convert file to base64
+      const base64 = await this.fileToBase64(file);
+
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_ENDPOINT}/pos/parse-pdf`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          fileName: file.name,
+          fileContent: base64
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to parse PDF');
+      }
+
+      const data = await response.json();
+      return data.metadata;
+    } catch (error) {
+      console.error('Error parsing PDF:', error);
+      throw new Error(`Failed to parse PDF: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Convert file to base64 string
+   */
+  private static fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
     });
   }
 

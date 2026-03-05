@@ -7,6 +7,7 @@ import json
 import os
 import uuid
 import re
+import base64
 from datetime import datetime
 from decimal import Decimal
 import boto3
@@ -14,8 +15,12 @@ from boto3.dynamodb.conditions import Key, Attr
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+s3 = boto3.client('s3')
+lambda_client = boto3.client('lambda')
 pos_table = dynamodb.Table(os.environ['POS_TABLE_NAME'])
 audit_logs_table = dynamodb.Table(os.environ['AUDIT_LOGS_TABLE_NAME'])
+pdf_extraction_lambda = os.environ.get('PDF_EXTRACTION_LAMBDA_NAME', 'ReconcileAI-PDFExtraction')
+invoice_bucket = os.environ.get('INVOICE_BUCKET_NAME')
 
 
 def sanitize_input(value):
@@ -331,13 +336,181 @@ def handle_get_pos(event):
         }
 
 
+def handle_parse_pdf(event):
+    """Handle POST /pos/parse-pdf - Parse PDF file to extract PO data"""
+    try:
+        # Parse request body
+        body = json.loads(event.get('body', '{}'))
+        
+        file_content = body.get('fileContent')
+        file_name = body.get('fileName', 'document.pdf')
+        
+        if not file_content:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'error': 'fileContent is required'
+                })
+            }
+        
+        # Decode base64 PDF and upload to S3 temporarily
+        pdf_bytes = base64.b64decode(file_content)
+        temp_key = f'temp-pos/{uuid.uuid4()}.pdf'
+        
+        s3.put_object(
+            Bucket=invoice_bucket,
+            Key=temp_key,
+            Body=pdf_bytes,
+            ContentType='application/pdf'
+        )
+        
+        try:
+            # Invoke PDF extraction Lambda
+            response = lambda_client.invoke(
+                FunctionName=pdf_extraction_lambda,
+                InvocationType='RequestResponse',
+                Payload=json.dumps({
+                    's3_bucket': invoice_bucket,
+                    's3_key': temp_key,
+                    'document_type': 'PO'
+                })
+            )
+            
+            result = json.loads(response['Payload'].read())
+            
+            if result.get('statusCode') != 200:
+                raise Exception(result.get('body', 'PDF extraction failed'))
+            
+            # Parse the extracted text to PO format
+            extracted_data = json.loads(result.get('body', '{}'))
+            text_lines = extracted_data.get('extracted_text', '').split('\n')
+            
+            metadata = parse_po_from_text(text_lines)
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'metadata': metadata
+                }, default=str)
+            }
+            
+        finally:
+            # Clean up temporary file
+            try:
+                s3.delete_object(Bucket=invoice_bucket, Key=temp_key)
+            except Exception as e:
+                print(f"Failed to delete temp file: {str(e)}")
+        
+    except Exception as e:
+        print(f"Error in handle_parse_pdf: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'error': f'Failed to parse PDF: {str(e)}'
+            })
+        }
+
+
+def parse_po_from_text(text_lines):
+    """Parse PO metadata from extracted text lines"""
+    metadata = {
+        'vendorName': '',
+        'poNumber': '',
+        'totalAmount': 0,
+        'lineItems': []
+    }
+    
+    # Common patterns for PO data
+    po_number_patterns = [
+        r'PO\s*#?\s*:?\s*([A-Z0-9-]+)',
+        r'Purchase\s+Order\s*#?\s*:?\s*([A-Z0-9-]+)',
+        r'Order\s*#?\s*:?\s*([A-Z0-9-]+)'
+    ]
+    
+    vendor_patterns = [
+        r'Vendor\s*:?\s*(.+)',
+        r'Supplier\s*:?\s*(.+)',
+        r'From\s*:?\s*(.+)'
+    ]
+    
+    # Extract PO number and vendor
+    for line in text_lines:
+        # Try to find PO number
+        if not metadata['poNumber']:
+            for pattern in po_number_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    metadata['poNumber'] = match.group(1).strip()
+                    break
+        
+        # Try to find vendor name
+        if not metadata['vendorName']:
+            for pattern in vendor_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    metadata['vendorName'] = match.group(1).strip()
+                    break
+    
+    # Extract line items (look for patterns like: description, quantity, price)
+    line_number = 1
+    for i, line in enumerate(text_lines):
+        # Look for lines with numbers that might be quantities and prices
+        numbers = re.findall(r'\d+\.?\d*', line)
+        if len(numbers) >= 2:
+            # Assume last two numbers are quantity and price
+            try:
+                quantity = float(numbers[-2])
+                unit_price = float(numbers[-1])
+                
+                # Get description (text before the numbers)
+                description = re.sub(r'\d+\.?\d*', '', line).strip()
+                if description and len(description) > 3:
+                    metadata['lineItems'].append({
+                        'LineNumber': line_number,
+                        'ItemDescription': description[:100],  # Limit length
+                        'Quantity': quantity,
+                        'UnitPrice': unit_price,
+                        'TotalPrice': quantity * unit_price
+                    })
+                    line_number += 1
+            except (ValueError, IndexError):
+                continue
+    
+    # Calculate total amount
+    metadata['totalAmount'] = sum(item['TotalPrice'] for item in metadata['lineItems'])
+    
+    # Set defaults if not found
+    if not metadata['vendorName']:
+        metadata['vendorName'] = 'Unknown Vendor'
+    if not metadata['poNumber']:
+        metadata['poNumber'] = f'PO-{uuid.uuid4().hex[:8].upper()}'
+    
+    return metadata
+
+
 def lambda_handler(event, context):
     """Main Lambda handler for PO management"""
     print(f"Event: {json.dumps(event)}")
     
     http_method = event.get('httpMethod')
+    path = event.get('path', '')
     
-    if http_method == 'POST':
+    # Handle PDF parsing endpoint
+    if http_method == 'POST' and '/parse-pdf' in path:
+        return handle_parse_pdf(event)
+    elif http_method == 'POST':
         return handle_post_po(event)
     elif http_method == 'GET':
         return handle_get_pos(event)
