@@ -940,6 +940,34 @@ def lambda_handler(event, context):
       }
     );
 
+    // POST /invoices - Create invoice
+    invoicesResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.invoiceManagementLambda, {
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '201',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
+          },
+        ],
+      }),
+      {
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '201',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      }
+    );
+
     // /invoices/{id} resource
     const invoiceIdResource = invoicesResource.addResource('{id}');
 
