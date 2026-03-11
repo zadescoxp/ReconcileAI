@@ -357,60 +357,52 @@ def handle_parse_pdf(event):
                 })
             }
         
-        # Decode base64 PDF and upload to S3 temporarily
+        # Decode base64 PDF
         pdf_bytes = base64.b64decode(file_content)
-        temp_key = f'temp-pos/{uuid.uuid4()}.pdf'
         
-        s3.put_object(
-            Bucket=invoice_bucket,
-            Key=temp_key,
-            Body=pdf_bytes,
-            ContentType='application/pdf'
-        )
+        # Extract text directly using pdfplumber
+        import io
+        import pdfplumber
         
-        try:
-            # Invoke PDF extraction Lambda
-            response = lambda_client.invoke(
-                FunctionName=pdf_extraction_lambda,
-                InvocationType='RequestResponse',
-                Payload=json.dumps({
-                    's3_bucket': invoice_bucket,
-                    's3_key': temp_key,
-                    'document_type': 'PO'
-                })
-            )
-            
-            result = json.loads(response['Payload'].read())
-            
-            if result.get('statusCode') != 200:
-                raise Exception(result.get('body', 'PDF extraction failed'))
-            
-            # Parse the extracted text to PO format
-            extracted_data = json.loads(result.get('body', '{}'))
-            text_lines = extracted_data.get('extracted_text', '').split('\n')
-            
-            metadata = parse_po_from_text(text_lines)
-            
+        pdf_file = io.BytesIO(pdf_bytes)
+        extracted_text = ""
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_text += page_text + "\n"
+        
+        if not extracted_text or len(extracted_text.strip()) < 10:
             return {
-                'statusCode': 200,
+                'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
                 'body': json.dumps({
-                    'metadata': metadata
-                }, default=str)
+                    'error': 'Could not extract text from PDF'
+                })
             }
-            
-        finally:
-            # Clean up temporary file
-            try:
-                s3.delete_object(Bucket=invoice_bucket, Key=temp_key)
-            except Exception as e:
-                print(f"Failed to delete temp file: {str(e)}")
+        
+        # Parse PO metadata from text
+        metadata = parse_po_from_text(extracted_text)
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'metadata': metadata
+            }, default=str)
+        }
         
     except Exception as e:
         print(f"Error in handle_parse_pdf: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             'statusCode': 500,
             'headers': {
@@ -423,8 +415,8 @@ def handle_parse_pdf(event):
         }
 
 
-def parse_po_from_text(text_lines):
-    """Parse PO metadata from extracted text lines"""
+def parse_po_from_text(text):
+    """Parse PO metadata from extracted text"""
     metadata = {
         'vendorName': '',
         'poNumber': '',
@@ -432,64 +424,113 @@ def parse_po_from_text(text_lines):
         'lineItems': []
     }
     
-    # Common patterns for PO data
+    lines = text.split('\n')
+    
+    # Parse PO number - more flexible patterns
     po_number_patterns = [
-        r'PO\s*#?\s*:?\s*([A-Z0-9-]+)',
-        r'Purchase\s+Order\s*#?\s*:?\s*([A-Z0-9-]+)',
-        r'Order\s*#?\s*:?\s*([A-Z0-9-]+)'
+        r'(?:PO|Purchase\s+Order)\s*(?:Number|#|No\.?)?\s*:?\s*([A-Z0-9\-]+)',
+        r'Order\s*(?:Number|#|No\.?)?\s*:?\s*([A-Z0-9\-]+)',
     ]
+    for pattern in po_number_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            metadata['poNumber'] = match.group(1).strip()
+            break
     
+    # Parse vendor name - look in first 10 lines
     vendor_patterns = [
-        r'Vendor\s*:?\s*(.+)',
-        r'Supplier\s*:?\s*(.+)',
-        r'From\s*:?\s*(.+)'
+        r'(?:Vendor|Supplier|From)\s*:?\s*([A-Za-z0-9\s&\.,\-\']+)',
+        r'^([A-Z][A-Za-z\s&\.,\-\']{5,50})$',  # Company name pattern
     ]
-    
-    # Extract PO number and vendor
-    for line in text_lines:
-        # Try to find PO number
-        if not metadata['poNumber']:
-            for pattern in po_number_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    metadata['poNumber'] = match.group(1).strip()
+    for i, line in enumerate(lines[:10]):
+        for pattern in vendor_patterns:
+            match = re.search(pattern, line, re.IGNORECASE if 'Vendor' in pattern else 0)
+            if match:
+                vendor_name = match.group(1).strip()
+                vendor_name = re.sub(r'\s+', ' ', vendor_name)
+                # Validate it's not a header
+                if len(vendor_name) > 3 and not any(x in vendor_name.lower() for x in ['purchase', 'order', 'date', 'number']):
+                    metadata['vendorName'] = vendor_name
                     break
-        
-        # Try to find vendor name
-        if not metadata['vendorName']:
-            for pattern in vendor_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    metadata['vendorName'] = match.group(1).strip()
-                    break
+        if metadata['vendorName']:
+            break
     
-    # Extract line items (look for patterns like: description, quantity, price)
-    line_number = 1
-    for i, line in enumerate(text_lines):
-        # Look for lines with numbers that might be quantities and prices
-        numbers = re.findall(r'\d+\.?\d*', line)
-        if len(numbers) >= 2:
-            # Assume last two numbers are quantity and price
+    # Parse total amount
+    total_patterns = [
+        r'(?:Total\s+Authorized\s+Amount|Grand\s+Total|Total\s+Amount|Total)\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})',
+    ]
+    for pattern in total_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            amount_str = match.group(1).replace(',', '')
             try:
-                quantity = float(numbers[-2])
-                unit_price = float(numbers[-1])
-                
-                # Get description (text before the numbers)
-                description = re.sub(r'\d+\.?\d*', '', line).strip()
-                if description and len(description) > 3:
-                    metadata['lineItems'].append({
-                        'LineNumber': line_number,
-                        'ItemDescription': description[:100],  # Limit length
-                        'Quantity': quantity,
-                        'UnitPrice': unit_price,
-                        'TotalPrice': quantity * unit_price
-                    })
-                    line_number += 1
-            except (ValueError, IndexError):
+                metadata['totalAmount'] = float(amount_str)
+                break
+            except ValueError:
                 continue
     
-    # Calculate total amount
-    metadata['totalAmount'] = sum(item['TotalPrice'] for item in metadata['lineItems'])
+    # Parse line items - look for table structure
+    line_number = 1
+    header_idx = -1
+    
+    # Find table header
+    for i, line in enumerate(lines):
+        if re.search(r'(?:Item|Description|Product).*(?:Qty|Quantity).*(?:Price|Unit|Rate)', line, re.IGNORECASE):
+            header_idx = i
+            break
+    
+    if header_idx >= 0:
+        # Parse rows after header
+        for i in range(header_idx + 1, min(header_idx + 50, len(lines))):
+            line = lines[i].strip()
+            if not line or len(line) < 5:
+                continue
+            
+            # Stop at footer
+            if re.search(r'(?:subtotal|tax|total|notes|terms)', line, re.IGNORECASE):
+                break
+            
+            # Extract numbers from line
+            parts = line.split()
+            numbers = []
+            desc_parts = []
+            
+            for part in parts:
+                num_match = re.match(r'\$?([\d,]+\.?\d{0,2})$', part)
+                if num_match:
+                    try:
+                        numbers.append(float(num_match.group(1).replace(',', '')))
+                    except:
+                        desc_parts.append(part)
+                else:
+                    desc_parts.append(part)
+            
+            # Need description and at least 2 numbers (qty, price)
+            if len(desc_parts) >= 1 and len(numbers) >= 2:
+                description = ' '.join(desc_parts)
+                
+                if len(numbers) >= 3:
+                    quantity = numbers[0]
+                    unit_price = numbers[1]
+                    total_price = numbers[2]
+                else:
+                    quantity = numbers[0]
+                    unit_price = numbers[1]
+                    total_price = quantity * unit_price
+                
+                if quantity > 0 and unit_price > 0:
+                    metadata['lineItems'].append({
+                        'LineNumber': line_number,
+                        'ItemDescription': description[:100],
+                        'Quantity': quantity,
+                        'UnitPrice': unit_price,
+                        'TotalPrice': total_price
+                    })
+                    line_number += 1
+    
+    # Calculate total if not found
+    if metadata['totalAmount'] == 0 and metadata['lineItems']:
+        metadata['totalAmount'] = sum(item['TotalPrice'] for item in metadata['lineItems'])
     
     # Set defaults if not found
     if not metadata['vendorName']:

@@ -8,6 +8,7 @@ import os
 import uuid
 import re
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict, List, Optional, Any
 import boto3
 from botocore.exceptions import ClientError
@@ -73,6 +74,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Parse invoice data from extracted text
         invoice_data = parse_invoice_data(extracted_text)
+        
+        print(f"Parsed invoice data: {json.dumps(invoice_data, default=str)}")
         
         # Validate required fields
         validate_invoice_data(invoice_data)
@@ -200,6 +203,7 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
                 if page_text:
                     extracted_text += page_text + "\n"
         
+        print(f"Extracted text from PDF ({len(extracted_text)} chars)")
         return extracted_text.strip()
         
     except Exception as e:
@@ -208,8 +212,8 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
 
 def parse_invoice_data(text: str) -> Dict[str, Any]:
     """
-    Parse invoice data from extracted text.
-    Uses regex patterns to identify invoice fields.
+    Parse invoice data from extracted text using pdfplumber tables.
+    Supports both invoices and purchase orders.
     """
     invoice_data = {
         'invoice_number': None,
@@ -220,11 +224,13 @@ def parse_invoice_data(text: str) -> Dict[str, Any]:
         'raw_text': text
     }
     
-    # Parse invoice number
+    lines = text.split('\n')
+    
+    # Parse invoice/PO number - more flexible patterns
     invoice_number_patterns = [
-        r'invoice\s*#?\s*:?\s*([A-Z0-9\-]+)',
-        r'invoice\s+number\s*:?\s*([A-Z0-9\-]+)',
-        r'inv\s*#?\s*:?\s*([A-Z0-9\-]+)',
+        r'(?:PO|Purchase\s+Order)\s*(?:Number|#|No\.?)?\s*:?\s*([A-Z0-9\-]+)',
+        r'(?:Invoice|Inv\.?)\s*(?:Number|#|No\.?)?\s*:?\s*([A-Z0-9\-]+)',
+        r'(?:Order|Reference)\s*(?:Number|#|No\.?)?\s*:?\s*([A-Z0-9\-]+)',
     ]
     for pattern in invoice_number_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -232,27 +238,29 @@ def parse_invoice_data(text: str) -> Dict[str, Any]:
             invoice_data['invoice_number'] = match.group(1).strip()
             break
     
-    # Parse vendor name (usually at the top of the invoice)
+    # Parse vendor name - look in first 10 lines
     vendor_patterns = [
-        r'from\s*:?\s*([A-Za-z0-9\s&\.,]+?)(?:\n|$)',
-        r'vendor\s*:?\s*([A-Za-z0-9\s&\.,]+?)(?:\n|$)',
-        r'^([A-Z][A-Za-z0-9\s&\.,]{3,50}?)(?:\n)',
+        r'(?:Vendor|Supplier|From|Bill\s+From)\s*:?\s*([A-Za-z0-9\s&\.,\-\']+)',
+        r'^([A-Z][A-Za-z\s&\.,\-\']{5,50})$',  # Company name pattern (capitalized, reasonable length)
     ]
-    for pattern in vendor_patterns:
-        match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-        if match:
-            vendor_name = match.group(1).strip()
-            # Clean up vendor name
-            vendor_name = re.sub(r'\s+', ' ', vendor_name)
-            if len(vendor_name) > 3:
-                invoice_data['vendor_name'] = vendor_name
-                break
+    for i, line in enumerate(lines[:10]):
+        for pattern in vendor_patterns:
+            match = re.search(pattern, line, re.IGNORECASE if 'Vendor' in pattern else 0)
+            if match:
+                vendor_name = match.group(1).strip()
+                vendor_name = re.sub(r'\s+', ' ', vendor_name)
+                # Validate it's not a common header
+                if len(vendor_name) > 3 and not any(x in vendor_name.lower() for x in ['invoice', 'purchase', 'order', 'date', 'number']):
+                    invoice_data['vendor_name'] = vendor_name
+                    break
+        if invoice_data['vendor_name']:
+            break
     
-    # Parse invoice date
+    # Parse date - multiple formats
     date_patterns = [
-        r'date\s*:?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-        r'invoice\s+date\s*:?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-        r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+        r'(?:PO|Invoice|Order)?\s*Date\s*:?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})',
+        r'(?:PO|Invoice|Order)?\s*Date\s*:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})',
+        r'(?:PO|Invoice|Order)?\s*Date\s*:?\s*([A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})',  # Jan 15, 2024
     ]
     for pattern in date_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -260,45 +268,119 @@ def parse_invoice_data(text: str) -> Dict[str, Any]:
             invoice_data['invoice_date'] = match.group(1).strip()
             break
     
-    # Parse total amount
+    # Parse total amount - look for various total labels
     total_patterns = [
-        r'total\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})',
-        r'amount\s+due\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})',
-        r'grand\s+total\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})',
+        r'(?:Total\s+Authorized\s+Amount|Grand\s+Total|Total\s+Amount|Amount\s+Due|Total)\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})',
+        r'(?:Total|Amount)\s*\$\s*([\d,]+\.?\d{0,2})',
     ]
     for pattern in total_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             amount_str = match.group(1).replace(',', '')
             try:
-                invoice_data['total_amount'] = float(amount_str)
+                invoice_data['total_amount'] = Decimal(amount_str)
                 break
             except ValueError:
                 continue
     
-    # Parse line items (simplified pattern)
-    # Look for patterns like: "Item description  Qty  Price  Total"
-    line_item_pattern = r'([A-Za-z0-9\s\-,\.]+?)\s+(\d+)\s+\$?([\d,]+\.?\d{0,2})\s+\$?([\d,]+\.?\d{0,2})'
-    matches = re.finditer(line_item_pattern, text)
+    # Parse line items using multiple strategies
+    line_items = []
     
-    for match in matches:
-        try:
-            item_description = match.group(1).strip()
-            quantity = int(match.group(2))
-            unit_price = float(match.group(3).replace(',', ''))
-            total_price = float(match.group(4).replace(',', ''))
+    # Strategy 1: Look for table-like structure with headers
+    header_idx = -1
+    for i, line in enumerate(lines):
+        if re.search(r'(?:Item|Description|Product).*(?:Qty|Quantity).*(?:Price|Unit|Rate)', line, re.IGNORECASE):
+            header_idx = i
+            break
+    
+    if header_idx >= 0:
+        # Parse rows after header
+        for i in range(header_idx + 1, min(header_idx + 50, len(lines))):
+            line = lines[i].strip()
+            if not line or len(line) < 5:
+                continue
             
-            # Basic validation
-            if len(item_description) > 3 and quantity > 0 and unit_price > 0:
-                invoice_data['line_items'].append({
-                    'item_description': item_description,
-                    'quantity': quantity,
-                    'unit_price': unit_price,
-                    'total_price': total_price
-                })
-        except (ValueError, IndexError):
-            continue
+            # Stop at footer keywords
+            if re.search(r'(?:subtotal|tax|total|notes|terms|conditions)', line, re.IGNORECASE):
+                break
+            
+            # Try to extract: description, quantity, unit price, total
+            # Pattern: text followed by numbers
+            parts = line.split()
+            numbers = []
+            desc_parts = []
+            
+            for part in parts:
+                # Check if it's a number (with optional $ and commas)
+                num_match = re.match(r'\$?([\d,]+\.?\d{0,2})$', part)
+                if num_match:
+                    try:
+                        numbers.append(Decimal(num_match.group(1).replace(',', '')))
+                    except:
+                        desc_parts.append(part)
+                else:
+                    desc_parts.append(part)
+            
+            # Need at least description and 2-3 numbers (qty, unit price, total)
+            if len(desc_parts) >= 1 and len(numbers) >= 2:
+                description = ' '.join(desc_parts)
+                
+                # Common patterns: [qty, unit_price, total] or [qty, price]
+                if len(numbers) >= 3:
+                    quantity = int(numbers[0]) if numbers[0] == int(numbers[0]) else numbers[0]
+                    unit_price = numbers[1]
+                    total_price = numbers[2]
+                elif len(numbers) == 2:
+                    quantity = int(numbers[0]) if numbers[0] == int(numbers[0]) else numbers[0]
+                    unit_price = numbers[1]
+                    total_price = quantity * unit_price
+                else:
+                    continue
+                
+                if quantity > 0 and unit_price > 0:
+                    line_items.append({
+                        'item_description': description[:200],
+                        'quantity': quantity,
+                        'unit_price': unit_price,
+                        'total_price': total_price
+                    })
     
+    # Strategy 2: Regex patterns for common formats
+    if not line_items:
+        patterns = [
+            # Description Qty $Price $Total
+            r'([A-Za-z0-9\s\-,\.\(\)\/]+?)\s+(\d+(?:\.\d+)?)\s+\$\s*([\d,]+\.?\d{0,2})\s+\$\s*([\d,]+\.?\d{0,2})',
+            # Description Qty Price Total (no $)
+            r'([A-Za-z0-9\s\-,\.\(\)\/]+?)\s+(\d+(?:\.\d+)?)\s+([\d,]+\.?\d{0,2})\s+([\d,]+\.?\d{0,2})',
+        ]
+        
+        for pattern in patterns:
+            matches = re.finditer(pattern, text, re.MULTILINE)
+            for match in matches:
+                try:
+                    description = match.group(1).strip()
+                    quantity = Decimal(match.group(2))
+                    unit_price = Decimal(match.group(3).replace(',', ''))
+                    total_price = Decimal(match.group(4).replace(',', ''))
+                    
+                    # Skip headers
+                    if any(x in description.lower() for x in ['item', 'description', 'quantity', 'price', 'total']):
+                        continue
+                    
+                    if len(description) > 2 and quantity > 0 and unit_price > 0:
+                        line_items.append({
+                            'item_description': description[:200],
+                            'quantity': quantity,
+                            'unit_price': unit_price,
+                            'total_price': total_price
+                        })
+                except (ValueError, IndexError):
+                    continue
+            
+            if line_items:
+                break
+    
+    invoice_data['line_items'] = line_items
     return invoice_data
 
 

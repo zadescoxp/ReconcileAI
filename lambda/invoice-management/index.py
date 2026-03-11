@@ -495,6 +495,161 @@ def handle_reject_invoice(event):
         }
 
 
+def handle_create_invoice(event):
+    """Handle POST /invoices - Create new invoice from uploaded data"""
+    try:
+        # Parse request body
+        if not event.get('body'):
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'error': 'Request body is required'
+                })
+            }
+        
+        try:
+            body = json.loads(event['body'])
+        except json.JSONDecodeError:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'error': 'Invalid JSON in request body'
+                })
+            }
+        
+        # Validate required fields
+        vendor_name = sanitize_input(body.get('vendorName'))
+        invoice_number = sanitize_input(body.get('invoiceNumber'))
+        line_items = body.get('lineItems', [])
+        uploaded_by = sanitize_input(body.get('uploadedBy', 'unknown'))
+        
+        if not vendor_name or not invoice_number:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'error': 'vendorName and invoiceNumber are required'
+                })
+            }
+        
+        if not line_items or len(line_items) == 0:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({
+                    'error': 'At least one line item is required'
+                })
+            }
+        
+        # Generate invoice ID
+        invoice_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat() + 'Z'
+        
+        # Calculate total amount
+        total_amount = Decimal('0')
+        for item in line_items:
+            total_amount += Decimal(str(item.get('TotalPrice', 0)))
+        
+        # Create invoice record
+        invoice = {
+            'InvoiceId': invoice_id,
+            'VendorName': vendor_name,
+            'InvoiceNumber': invoice_number,
+            'InvoiceDate': timestamp,
+            'LineItems': line_items,
+            'TotalAmount': total_amount,
+            'Status': 'Received',
+            'MatchedPOIds': [],
+            'Discrepancies': [],
+            'FraudFlags': [],
+            'AIReasoning': '',
+            'ReceivedDate': timestamp,
+            'S3Key': f'invoices/{invoice_id}.json',
+            'UploadedBy': uploaded_by
+        }
+        
+        # Save to DynamoDB
+        invoices_table.put_item(Item=invoice)
+        
+        # Log to audit trail
+        log_audit(
+            actor=uploaded_by,
+            action_type='InvoiceCreated',
+            entity_id=invoice_id,
+            details={
+                'invoiceNumber': invoice_number,
+                'vendorName': vendor_name,
+                'totalAmount': str(total_amount),
+                'lineItemCount': len(line_items),
+                'timestamp': timestamp
+            }
+        )
+        
+        # Trigger Step Function for processing
+        try:
+            sfn_response = sfn_client.start_execution(
+                stateMachineArn=state_machine_arn,
+                name=f"invoice-{invoice_id}",
+                input=json.dumps({
+                    'invoiceId': invoice_id,
+                    's3Key': invoice['S3Key']
+                })
+            )
+            
+            # Update invoice with Step Function ARN
+            invoices_table.update_item(
+                Key={'InvoiceId': invoice_id},
+                UpdateExpression='SET StepFunctionArn = :arn',
+                ExpressionAttributeValues={
+                    ':arn': sfn_response['executionArn']
+                }
+            )
+        except Exception as e:
+            print(f"Error starting Step Function: {str(e)}")
+            # Continue even if Step Function fails
+        
+        return {
+            'statusCode': 201,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'message': 'Invoice created successfully',
+                'invoiceId': invoice_id,
+                'status': 'Received'
+            })
+        }
+        
+    except Exception as e:
+        print(f"Error in handle_create_invoice: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'error': 'Internal server error',
+                'details': str(e)
+            })
+        }
+
+
 def lambda_handler(event, context):
     """Main Lambda handler for invoice management"""
     print(f"Event: {json.dumps(event)}")
@@ -507,6 +662,8 @@ def lambda_handler(event, context):
         return handle_get_invoices(event)
     elif http_method == 'GET' and path.startswith('/invoices/') and not ('approve' in path or 'reject' in path):
         return handle_get_invoice_by_id(event)
+    elif http_method == 'POST' and path == '/invoices':
+        return handle_create_invoice(event)
     elif http_method == 'POST' and '/approve' in path:
         return handle_approve_invoice(event)
     elif http_method == 'POST' and '/reject' in path:

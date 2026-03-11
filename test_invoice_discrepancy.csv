@@ -1,0 +1,4 @@
+VendorName,InvoiceNumber,ItemDescription,Quantity,UnitPrice,TotalPrice
+Acme Corporation,INV-2024-002,Widget A,12,50.0,600.0
+Acme Corporation,INV-2024-002,Widget B,7,100.0,700.0
+Acme Corporation,INV-2024-002,Widget C,12,50.0,600.0

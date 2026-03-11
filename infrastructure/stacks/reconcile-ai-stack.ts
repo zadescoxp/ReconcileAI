@@ -341,8 +341,48 @@ export class ReconcileAIStack extends cdk.Stack {
     });
 
     // ========================================
+    // Lambda Layers
+    // ========================================
+
+    // PDFPlumber Layer - shared by PDF extraction and PO management
+    const pdfplumberLayer = new lambda.LayerVersion(this, 'PDFPlumberLayer', {
+      layerVersionName: 'ReconcileAI-PDFPlumber',
+      code: lambda.Code.fromAsset('layers/pdfplumber'),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_11],
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
+      description: 'PDFPlumber library for PDF text extraction',
+    });
+
+    // ========================================
     // Lambda Functions
     // ========================================
+
+    // Email Processor Lambda - Extracts PDF attachments from SES emails
+    const emailProcessorLambda = new lambda.Function(this, 'EmailProcessorLambda', {
+      functionName: 'ReconcileAI-EmailProcessor',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.lambda_handler',
+      code: lambda.Code.fromAsset('lambda/email-processor'),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        INVOICE_BUCKET: this.invoiceBucket.bucketName,
+        STATE_MACHINE_ARN: '', // Will be set after state machine is created
+      },
+    });
+
+    // Grant email processor permissions
+    this.invoiceBucket.grantReadWrite(emailProcessorLambda);
+
+    // Add S3 event notification for incoming emails
+    this.invoiceBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(emailProcessorLambda),
+      {
+        prefix: 'emails/',
+      }
+    );
 
     // PDF Extraction Lambda Function
     this.pdfExtractionLambda = new lambda.Function(this, 'PDFExtractionLambda', {
@@ -351,6 +391,7 @@ export class ReconcileAIStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64, // ARM/Graviton2 for cost efficiency
       handler: 'index.lambda_handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/pdf-extraction')),
+      layers: [pdfplumberLayer],
       timeout: cdk.Duration.seconds(60), // PDF extraction can take time
       memorySize: 512, // Sufficient for PDF processing
       environment: {
@@ -358,10 +399,6 @@ export class ReconcileAIStack extends cdk.Stack {
         AUDIT_LOGS_TABLE_NAME: this.auditLogsTable.tableName,
         SNS_TOPIC_ARN: this.adminNotificationTopic.topicArn,
       },
-      layers: [
-        // Lambda layer for pdfplumber will be created separately
-        // For now, we'll package dependencies with the function
-      ],
     });
 
     // Grant Lambda permissions to read from S3
@@ -587,6 +624,10 @@ export class ReconcileAIStack extends cdk.Stack {
       tracingEnabled: true, // Enable X-Ray tracing for debugging
     });
 
+    // Update email processor Lambda with state machine ARN
+    emailProcessorLambda.addEnvironment('STATE_MACHINE_ARN', this.invoiceProcessingStateMachine.stateMachineArn);
+    this.invoiceProcessingStateMachine.grantStartExecution(emailProcessorLambda);
+
     // Output state machine details
     new cdk.CfnOutput(this, 'StateMachineArn', {
       value: this.invoiceProcessingStateMachine.stateMachineArn,
@@ -716,6 +757,7 @@ def lambda_handler(event, context):
       architecture: lambda.Architecture.ARM_64,
       handler: 'index.lambda_handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/po-management')),
+      layers: [pdfplumberLayer],
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {

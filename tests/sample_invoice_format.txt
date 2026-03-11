@@ -1,0 +1,57 @@
+INVOICE FORMAT THAT WORKS WITH RECONCILEAI
+===========================================
+
+Required Fields:
+1. Invoice Number: Must have "Invoice #:" or "Invoice Number:" or "PO Number:"
+2. Vendor Name: Must have "Vendor:" label
+3. Invoice Date: Must have "Date:" or "Invoice Date:" or "PO Date:" in format YYYY-MM-DD or MM/DD/YYYY
+4. Total Amount: Must have "Total:" or "Total Authorized Amount:" with $ sign
+5. Line Items: Must be in table format with columns: Description | Quantity | Unit Price | Total
+
+SAMPLE INVOICE TEXT FORMAT:
+---------------------------
+
+INVOICE
+
+Vendor: Office Supplies Co.
+Invoice Number: INV-12345
+Date: 2026-03-07
+
+Item Description                    Quantity    Unit Price    Total
+Office Chairs                       5           $150          $750
+Desk Lamps                         10           $25           $250
+Printer Paper (Reams)              20           $8            $160
+
+Subtotal: $1160
+Tax: $116
+Total: $1276
+
+
+SAMPLE PURCHASE ORDER FORMAT:
+------------------------------
+
+PURCHASE ORDER
+
+Vendor: Tech Equipment Inc.
+PO Number: PO-9876
+PO Date: 2026-03-07
+
+Item Description                    Quantity    Unit Price    Total
+Laptops (Dell XPS)                 3           $1200         $3600
+Monitors (27 inch)                 6           $300          $1800
+Keyboards                          10          $50           $500
+
+Subtotal: $5900
+Shipping: $100
+Tax: $600
+Total Authorized Amount: $6600
+
+
+KEY FORMATTING RULES:
+---------------------
+1. Use clear labels: "Vendor:", "Invoice Number:", "Date:", "Total:"
+2. Line items must have 4 columns: Description, Quantity, Unit Price, Total
+3. Use $ signs for prices
+4. Separate columns with spaces (at least 2-3 spaces)
+5. Keep descriptions simple (avoid special characters)
+6. Use whole numbers or decimals with 2 places (e.g., $150 or $150.00)

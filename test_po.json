@@ -1,0 +1,21 @@
+{
+  "vendorName": "Acme Corporation",
+  "poNumber": "PO-2024-001",
+  "lineItems": [
+    {
+      "itemDescription": "Widget A",
+      "quantity": 10,
+      "unitPrice": 50.0
+    },
+    {
+      "itemDescription": "Widget B",
+      "quantity": 5,
+      "unitPrice": 100.0
+    },
+    {
+      "itemDescription": "Widget C",
+      "quantity": 10,
+      "unitPrice": 50.0
+    }
+  ]
+}
