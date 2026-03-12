@@ -11,7 +11,7 @@
 
 .invoice-list-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .invoice-list-filters {
@@ -22,15 +22,16 @@
 
 .invoice-list-filters label {
   font-weight: 500;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .invoice-list-filters select {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-primary);
   border-radius: 4px;
   font-size: 14px;
-  background-color: white;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -39,7 +40,7 @@
 .invoice-list-empty {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .invoice-list-error button {
@@ -58,9 +59,10 @@
 
 .invoice-list-table-container {
   overflow-x: auto;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-primary);
 }
 
 .invoice-list-table {
@@ -69,24 +71,25 @@
 }
 
 .invoice-list-table thead {
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
 }
 
 .invoice-list-table th {
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #dee2e6;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-primary);
 }
 
 .invoice-list-table td {
   padding: 12px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-secondary);
 }
 
 .invoice-list-table tbody tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
 }
 
 .status-badge {
@@ -170,19 +173,19 @@
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   transition: all 0.2s;
 }
 
 .btn-refresh:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
 }
 
 .btn-refresh:disabled {
@@ -214,7 +217,7 @@
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
 }
@@ -244,7 +247,7 @@
 
 .last-refresh {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted);
 }
 
 /* Responsive */

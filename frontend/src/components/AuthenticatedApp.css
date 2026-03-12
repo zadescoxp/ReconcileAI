@@ -1,0 +1,302 @@
+/* ===== CUSTOM AMPLIFY AUTHENTICATOR DARK THEME ===== */
+
+/* Main Authenticator Container */
+[data-amplify-authenticator] {
+  --amplify-colors-background-primary: #0f172a;
+  --amplify-colors-background-secondary: #1e293b;
+  --amplify-colors-background-tertiary: #334155;
+  
+  --amplify-colors-font-primary: #ffffff;
+  --amplify-colors-font-secondary: #e2e8f0;
+  --amplify-colors-font-tertiary: #cbd5e1;
+  
+  --amplify-colors-brand-primary-10: rgba(59, 130, 246, 0.1);
+  --amplify-colors-brand-primary-80: #60a5fa;
+  --amplify-colors-brand-primary-90: #3b82f6;
+  --amplify-colors-brand-primary-100: #1d4ed8;
+  
+  --amplify-colors-border-primary: #334155;
+  --amplify-colors-border-secondary: #475569;
+  
+  --amplify-radii-small: 0.5rem;
+  --amplify-radii-medium: 0.75rem;
+  --amplify-radii-large: 1rem;
+  
+  --amplify-shadows-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --amplify-shadows-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --amplify-shadows-large: 0 8px 32px rgba(0, 0, 0, 0.5);
+  
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated Background */
+[data-amplify-authenticator]::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Form Container */
+[data-amplify-authenticator] [data-amplify-container] {
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(96, 165, 250, 0.1);
+  padding: 3rem;
+  max-width: 480px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Logo/Header Area */
+[data-amplify-authenticator] [data-amplify-router] {
+  animation: fadeIn 0.8s ease-out 0.2s backwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Form Heading */
+[data-amplify-authenticator] h2,
+[data-amplify-authenticator] h3 {
+  color: #ffffff !important;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Input Fields */
+[data-amplify-authenticator] input {
+  background: rgba(51, 65, 85, 0.5) !important;
+  border: 1px solid rgba(96, 165, 250, 0.2) !important;
+  color: #ffffff !important;
+  padding: 0.875rem 1rem !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 0.95rem !important;
+}
+
+[data-amplify-authenticator] input:focus {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15), 0 4px 12px rgba(96, 165, 250, 0.2) !important;
+  background: rgba(51, 65, 85, 0.7) !important;
+  transform: translateY(-2px);
+}
+
+[data-amplify-authenticator] input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Labels */
+[data-amplify-authenticator] label {
+  color: #e2e8f0 !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Primary Button (Sign In/Sign Up) */
+[data-amplify-authenticator] button[type="submit"],
+[data-amplify-authenticator] button[data-variation="primary"] {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.875rem 1.5rem !important;
+  border-radius: 0.75rem !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-amplify-authenticator] button[type="submit"]::before,
+[data-amplify-authenticator] button[data-variation="primary"]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+[data-amplify-authenticator] button[type="submit"]:hover::before,
+[data-amplify-authenticator] button[data-variation="primary"]:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+[data-amplify-authenticator] button[type="submit"]:hover,
+[data-amplify-authenticator] button[data-variation="primary"]:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4) !important;
+}
+
+[data-amplify-authenticator] button[type="submit"]:active,
+[data-amplify-authenticator] button[data-variation="primary"]:active {
+  transform: translateY(-1px) !important;
+}
+
+/* Secondary Buttons */
+[data-amplify-authenticator] button[data-variation="link"],
+[data-amplify-authenticator] button:not([type="submit"]):not([data-variation="primary"]) {
+  color: #60a5fa !important;
+  background: transparent !important;
+  border: none !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-amplify-authenticator] button[data-variation="link"]:hover,
+[data-amplify-authenticator] button:not([type="submit"]):not([data-variation="primary"]):hover {
+  color: #93c5fd !important;
+  text-decoration: underline !important;
+}
+
+/* Error Messages */
+[data-amplify-authenticator] [data-amplify-error] {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+  padding: 0.875rem !important;
+  border-radius: 0.75rem !important;
+  margin-bottom: 1rem !important;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Tabs (Sign In / Create Account) */
+[data-amplify-authenticator] [role="tablist"] {
+  border-bottom: 2px solid rgba(96, 165, 250, 0.2) !important;
+  margin-bottom: 2rem !important;
+}
+
+[data-amplify-authenticator] [role="tab"] {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  padding: 0.875rem 1.5rem !important;
+  transition: all 0.3s ease !important;
+  border-bottom: 3px solid transparent !important;
+}
+
+[data-amplify-authenticator] [role="tab"][aria-selected="true"] {
+  color: #60a5fa !important;
+  border-bottom-color: #60a5fa !important;
+}
+
+[data-amplify-authenticator] [role="tab"]:hover {
+  color: #93c5fd !important;
+}
+
+/* Footer Links */
+[data-amplify-authenticator] footer {
+  margin-top: 2rem !important;
+  text-align: center !important;
+}
+
+[data-amplify-authenticator] footer button {
+  color: #94a3b8 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Loading Spinner */
+[data-amplify-authenticator] [data-amplify-loader] {
+  border-color: rgba(96, 165, 250, 0.2) !important;
+  border-top-color: #60a5fa !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  [data-amplify-authenticator] [data-amplify-container] {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+  }
+  
+  [data-amplify-authenticator] h2,
+  [data-amplify-authenticator] h3 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Add ReconcileAI Branding */
+[data-amplify-authenticator]::after {
+  content: 'ReconcileAI';
+  position: absolute;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  z-index: 2;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

@@ -13,7 +13,7 @@
 
 .invoice-detail-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .btn-back {
@@ -34,7 +34,7 @@
 .invoice-detail-error {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .invoice-detail-error button {
@@ -54,17 +54,18 @@
 }
 
 .detail-section {
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-primary);
 }
 
 .detail-section h3 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 18px;
-  border-bottom: 2px solid #007bff;
+  border-bottom: 2px solid var(--accent-primary);
   padding-bottom: 8px;
 }
 
@@ -82,18 +83,18 @@
 
 .detail-item label {
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .detail-item span {
-  color: #333;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
 .detail-item .amount {
   font-weight: 600;
-  color: #28a745;
+  color: var(--accent-success);
 }
 
 .line-items-table {
@@ -103,26 +104,27 @@
 }
 
 .line-items-table thead {
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
 }
 
 .line-items-table th {
   padding: 10px;
   text-align: left;
   font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #dee2e6;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-primary);
 }
 
 .line-items-table td {
   padding: 10px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-secondary);
 }
 
 .matched-po {
   margin-bottom: 15px;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
   border-radius: 4px;
 }
 
@@ -131,18 +133,19 @@
   justify-content: space-between;
   margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .discrepancies-section {
-  border-left: 4px solid #ffc107;
+  border-left: 4px solid var(--accent-warning);
 }
 
 .discrepancy-item {
   margin-bottom: 15px;
   padding: 15px;
-  background-color: #fff3cd;
+  background-color: rgba(251, 191, 36, 0.1);
   border-radius: 4px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .discrepancy-header {
@@ -154,17 +157,17 @@
 
 .discrepancy-type {
   font-weight: 600;
-  color: #856404;
+  color: var(--accent-warning);
 }
 
 .discrepancy-difference {
   font-weight: 600;
-  color: #721c24;
+  color: var(--accent-danger);
 }
 
 .discrepancy-description {
   margin: 10px 0;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .discrepancy-comparison {
@@ -176,23 +179,25 @@
 
 .comparison-item {
   padding: 10px;
-  background-color: white;
+  background-color: var(--bg-tertiary);
   border-radius: 4px;
+  border: 1px solid var(--border-primary);
 }
 
 .comparison-item strong {
   display: block;
   margin-bottom: 5px;
-  color: #555;
+  color: var(--text-primary);
 }
 
 .comparison-item p {
   margin: 2px 0;
   font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .fraud-flags-section {
-  border-left: 4px solid #dc3545;
+  border-left: 4px solid var(--accent-danger);
 }
 
 .fraud-flag-item {
@@ -202,15 +207,18 @@
 }
 
 .fraud-flag-item.severity-high {
-  background-color: #f8d7da;
+  background-color: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .fraud-flag-item.severity-medium {
-  background-color: #fff3cd;
+  background-color: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .fraud-flag-item.severity-low {
-  background-color: #d1ecf1;
+  background-color: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
 .fraud-flag-header {
@@ -250,24 +258,26 @@
 
 .fraud-flag-description {
   margin: 10px 0;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .fraud-flag-evidence {
   margin-top: 10px;
   padding: 10px;
-  background-color: white;
+  background-color: var(--bg-tertiary);
   border-radius: 4px;
+  border: 1px solid var(--border-primary);
 }
 
 .fraud-flag-evidence pre {
   margin: 5px 0 0 0;
   font-size: 12px;
   overflow-x: auto;
+  color: var(--text-secondary);
 }
 
 .ai-reasoning-section {
-  border-left: 4px solid #17a2b8;
+  border-left: 4px solid var(--accent-primary);
 }
 
 .ai-reasoning-header {
@@ -287,14 +297,15 @@
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #007bff;
+  color: var(--accent-primary);
 }
 
 .ai-reasoning-content {
   margin-top: 15px;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: var(--bg-tertiary);
   border-radius: 4px;
+  border: 1px solid var(--border-primary);
 }
 
 .ai-reasoning-content pre {
@@ -303,11 +314,11 @@
   word-wrap: break-word;
   font-size: 14px;
   line-height: 1.6;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .approval-actions-section {
-  border-left: 4px solid #28a745;
+  border-left: 4px solid var(--accent-success);
 }
 
 .action-message {
@@ -343,27 +354,30 @@
 
 .form-group label {
   font-weight: 600;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .form-group textarea {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-primary);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .form-group textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-group textarea:disabled {
-  background-color: #f8f9fa;
+  background-color: var(--bg-hover);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .approval-buttons {

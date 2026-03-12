@@ -1,6 +1,7 @@
 import React from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
+import './AuthenticatedApp.css';
 import { AuthProvider } from '../contexts/AuthContext';
 import Dashboard from './Dashboard';
 

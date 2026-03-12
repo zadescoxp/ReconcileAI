@@ -57,11 +57,11 @@ const InvoiceUpload: React.FC<InvoiceUploadProps> = ({ onUploadSuccess }) => {
 
         // Validate file type
         const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
-        if (fileExtension !== 'csv' && fileExtension !== 'json') {
+        if (fileExtension !== 'csv' && fileExtension !== 'json' && fileExtension !== 'pdf') {
             setResult({
                 success: false,
-                message: 'Invalid file type. Please upload a CSV or JSON file.',
-                errors: ['Only .csv and .json files are supported']
+                message: 'Invalid file type. Please upload a CSV, JSON, or PDF file.',
+                errors: ['Only .csv, .json, and .pdf files are supported']
             });
             return;
         }
@@ -73,8 +73,11 @@ const InvoiceUpload: React.FC<InvoiceUploadProps> = ({ onUploadSuccess }) => {
             let metadata: InvoiceMetadata;
             if (fileExtension === 'csv') {
                 metadata = await InvoiceService.parseCSVFile(selectedFile);
-            } else {
+            } else if (fileExtension === 'json') {
                 metadata = await InvoiceService.parseJSONFile(selectedFile);
+            } else {
+                // PDF file - upload to backend for parsing
+                metadata = await InvoiceService.parsePDFFile(selectedFile);
             }
             setParsedData(metadata);
         } catch (error) {
@@ -146,7 +149,7 @@ const InvoiceUpload: React.FC<InvoiceUploadProps> = ({ onUploadSuccess }) => {
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.json"
+                    accept=".csv,.json,.pdf"
                     onChange={handleFileInputChange}
                     style={{ display: 'none' }}
                 />
@@ -166,7 +169,7 @@ const InvoiceUpload: React.FC<InvoiceUploadProps> = ({ onUploadSuccess }) => {
                         />
                     </svg>
                     <p className="drop-zone-text">
-                        {file ? file.name : 'Drag and drop a CSV or JSON file here'}
+                        {file ? file.name : 'Drag and drop a CSV, JSON, or PDF file here'}
                     </p>
                     <p className="drop-zone-subtext">or click to browse</p>
                 </div>

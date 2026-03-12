@@ -294,6 +294,52 @@ export class InvoiceService {
   }
 
   /**
+   * Parse PDF file to invoice metadata using backend API
+   */
+  static async parsePDFFile(file: File): Promise<InvoiceMetadata> {
+    try {
+      // Convert file to base64
+      const base64 = await this.fileToBase64(file);
+
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_ENDPOINT}/invoices/parse-pdf`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          fileName: file.name,
+          fileContent: base64
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to parse PDF');
+      }
+
+      const data = await response.json();
+      return data.metadata;
+    } catch (error) {
+      console.error('Error parsing PDF:', error);
+      throw new Error(`Failed to parse PDF: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Convert file to base64 string
+   */
+  private static fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
    * Validate invoice metadata
    */
   private static validateInvoice(metadata: InvoiceMetadata): string[] {

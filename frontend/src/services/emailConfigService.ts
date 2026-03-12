@@ -34,8 +34,12 @@ export const EmailConfigService = {
      */
     async listEmails(): Promise<ApiResponse<EmailConfig[]>> {
         try {
+            // Return empty array for now - backend API not yet implemented
+            return { data: [] };
+            
+            /* Uncomment when backend is ready:
             const headers = await getAuthHeaders();
-            const response = await fetch(`${API_ENDPOINT}email-config`, {
+            const response = await fetch(`${API_ENDPOINT}/email-config`, {
                 method: 'GET',
                 headers,
             });
@@ -47,6 +51,7 @@ export const EmailConfigService = {
 
             const data = await response.json();
             return { data: data.emails || [] };
+            */
         } catch (error) {
             console.error('Error listing emails:', error);
             return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -58,8 +63,12 @@ export const EmailConfigService = {
      */
     async addEmail(email: string): Promise<ApiResponse<{ message: string; email: string; status: string }>> {
         try {
+            // Return error message for now - backend API not yet implemented
+            return { error: 'Email configuration API is not yet implemented. This feature requires backend Lambda function deployment.' };
+            
+            /* Uncomment when backend is ready:
             const headers = await getAuthHeaders();
-            const response = await fetch(`${API_ENDPOINT}email-config`, {
+            const response = await fetch(`${API_ENDPOINT}/email-config`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ email }),
@@ -72,6 +81,7 @@ export const EmailConfigService = {
 
             const data = await response.json();
             return { data };
+            */
         } catch (error) {
             console.error('Error adding email:', error);
             return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -83,8 +93,12 @@ export const EmailConfigService = {
      */
     async removeEmail(email: string): Promise<ApiResponse<{ message: string }>> {
         try {
+            // Return error message for now - backend API not yet implemented
+            return { error: 'Email configuration API is not yet implemented.' };
+            
+            /* Uncomment when backend is ready:
             const headers = await getAuthHeaders();
-            const response = await fetch(`${API_ENDPOINT}email-config`, {
+            const response = await fetch(`${API_ENDPOINT}/email-config`, {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify({ email }),
@@ -97,6 +111,7 @@ export const EmailConfigService = {
 
             const data = await response.json();
             return { data };
+            */
         } catch (error) {
             console.error('Error removing email:', error);
             return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -108,8 +123,12 @@ export const EmailConfigService = {
      */
     async resendVerification(email: string): Promise<ApiResponse<{ message: string }>> {
         try {
+            // Return error message for now - backend API not yet implemented
+            return { error: 'Email configuration API is not yet implemented.' };
+            
+            /* Uncomment when backend is ready:
             const headers = await getAuthHeaders();
-            const response = await fetch(`${API_ENDPOINT}email-config/resend`, {
+            const response = await fetch(`${API_ENDPOINT}/email-config/resend`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ email }),
@@ -122,6 +141,7 @@ export const EmailConfigService = {
 
             const data = await response.json();
             return { data };
+            */
         } catch (error) {
             console.error('Error resending verification:', error);
             return { error: error instanceof Error ? error.message : 'Unknown error' };

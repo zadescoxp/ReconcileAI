@@ -162,7 +162,8 @@ const AuditTrailPage: React.FC = () => {
   };
 
   const getActionBadgeClass = (actionType: string): string => {
-    const type = actionType.toLowerCase().replace(/([A-Z])/g, '-$1').toLowerCase();
+    if (!actionType) return 'action-badge';
+    const type = actionType.replace(/([A-Z])/g, '-$1').toLowerCase();
     return `action-badge ${type}`;
   };
 
